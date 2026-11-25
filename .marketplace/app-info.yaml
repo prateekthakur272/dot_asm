@@ -3,7 +3,7 @@
 # See the marketplace's sample/.marketplace/app-info.yaml for every field.
 
 name: dot ASM
-tagline: Learn assembly and design processors: run code on a simulated CPU and watch it work.
+tagline: "Learn assembly and design processors: run code on a simulated CPU and watch it work."
 
 description: |
   dot ASM is a desktop app for learning assembly language and understanding how a
