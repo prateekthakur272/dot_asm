@@ -1,0 +1,7 @@
+app_id: 20819257-7647-4BFF-B7D5-9DD676A37B61
+publisher_name: Prateek Thakur
+publisher_url: https://github.com/prateekthakur272/dot_asm
+display_name: dot ASM
+executable_name: DotAsm.exe
+create_desktop_icon: true
+setup_icon_file: windows/runner/resources/app_icon.ico

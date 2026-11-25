@@ -1,0 +1,9 @@
+display_name: dot ASM
+publisher_display_name: Prateek Thakur
+publisher: CN=Prateek Thakur
+identity_name: io.github.prateekthakur272.dotasm
+msix_version: 1.0.0.0
+logo_path: macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png
+architecture: x64
+sign_msix: false
+install_certificate: false

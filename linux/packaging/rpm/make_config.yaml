@@ -1,0 +1,13 @@
+display_name: dot ASM
+package_name: dotasm
+summary: A fast, file-first desktop app
+packager: Prateek Thakur
+packagerEmail: prateekthakur272@gmail.com
+url: https://github.com/prateekthakur272/dot_asm
+license: Unspecified
+description: dot ASM is a fast, file-first desktop app.
+icon: linux/runner/resources/icon.png
+generic_name: Desktop App
+categories:
+  - Utility
+startup_notify: true

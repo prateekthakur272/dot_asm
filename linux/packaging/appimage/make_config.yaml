@@ -1,0 +1,6 @@
+display_name: dot ASM
+icon: linux/runner/resources/icon.png
+generic_name: Desktop App
+categories:
+  - Utility
+startup_notify: true
