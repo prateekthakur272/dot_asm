@@ -1,34 +1,138 @@
 import 'package:flutter/material.dart' show ThemeMode;
 
 /// User preferences persisted to `settings.json`.
+/// Preferences stored in `settings.json`.
 class AppSettings {
   final ThemeMode themeMode;
-  final bool openAtLogin;
+
+  /// The editor's font size in points (see `EditorMetrics.sizes`).
+  final int editorFontSize;
+
+  /// Spaces per indent level in the assembly editor (2, 4 or 8).
+  final int editorTabSize;
+
+  /// Close brackets and quotes as they are typed, and type over the closing one.
+  final bool autoClosePairs;
+
+  /// Open the suggestion list while typing (Ctrl+Space always opens it).
+  final bool autoSuggest;
+
+  /// Faint vertical lines at every indent step.
+  final bool indentGuides;
+
+  /// The run speed a new project starts with: `slow`, `medium` or `fast`.
+  final String defaultSpeed;
+
+  /// How registers and memory values are shown at first: `hex`, `dec`, `udec` or `bin`.
+  final String valueFormat;
+
+  /// How many executed instructions are kept so that **Step back** can undo them.
+  final int historyLimit;
+
+  /// Open the project that was open when the app was closed.
+  final bool reopenLastProject;
+
+  /// Look for a newer release when the app starts.
+  final bool checkUpdates;
 
   const AppSettings({
     this.themeMode = ThemeMode.system,
-    this.openAtLogin = false,
+    this.editorFontSize = 13,
+    this.editorTabSize = 4,
+    this.autoClosePairs = true,
+    this.autoSuggest = true,
+    this.indentGuides = true,
+    this.defaultSpeed = 'fast',
+    this.valueFormat = 'hex',
+    this.historyLimit = 20000,
+    this.reopenLastProject = true,
+    this.checkUpdates = true,
   });
 
-  AppSettings copyWith({ThemeMode? themeMode, bool? openAtLogin}) =>
-      AppSettings(
-        themeMode: themeMode ?? this.themeMode,
-        openAtLogin: openAtLogin ?? this.openAtLogin,
-      );
+  AppSettings copyWith({
+    ThemeMode? themeMode,
+    int? editorFontSize,
+    int? editorTabSize,
+    bool? autoClosePairs,
+    bool? autoSuggest,
+    bool? indentGuides,
+    String? defaultSpeed,
+    String? valueFormat,
+    int? historyLimit,
+    bool? reopenLastProject,
+    bool? checkUpdates,
+  }) => AppSettings(
+    themeMode: themeMode ?? this.themeMode,
+    editorFontSize: editorFontSize ?? this.editorFontSize,
+    editorTabSize: editorTabSize ?? this.editorTabSize,
+    autoClosePairs: autoClosePairs ?? this.autoClosePairs,
+    autoSuggest: autoSuggest ?? this.autoSuggest,
+    indentGuides: indentGuides ?? this.indentGuides,
+    defaultSpeed: defaultSpeed ?? this.defaultSpeed,
+    valueFormat: valueFormat ?? this.valueFormat,
+    historyLimit: historyLimit ?? this.historyLimit,
+    reopenLastProject: reopenLastProject ?? this.reopenLastProject,
+    checkUpdates: checkUpdates ?? this.checkUpdates,
+  );
 
   Map<String, dynamic> toJson() => {
     'themeMode': themeMode.name,
-    'openAtLogin': openAtLogin,
+    'editorFontSize': editorFontSize,
+    'editorTabSize': editorTabSize,
+    'autoClosePairs': autoClosePairs,
+    'autoSuggest': autoSuggest,
+    'indentGuides': indentGuides,
+    'defaultSpeed': defaultSpeed,
+    'valueFormat': valueFormat,
+    'historyLimit': historyLimit,
+    'reopenLastProject': reopenLastProject,
+    'checkUpdates': checkUpdates,
   };
 
+  /// Reads settings, ignoring keys it does not know (such as one written by an older version) and replacing any value
+  /// that is out of range with the default.
   factory AppSettings.fromJson(Map<String, dynamic>? m) {
     if (m == null) return const AppSettings();
+    const d = AppSettings();
+    T pick<T>(Object? v, List<T> allowed, T fallback) =>
+        allowed.contains(v) ? v as T : fallback;
     return AppSettings(
       themeMode: ThemeMode.values.firstWhere(
         (e) => e.name == m['themeMode'],
         orElse: () => ThemeMode.system,
       ),
-      openAtLogin: m['openAtLogin'] as bool? ?? false,
+      editorFontSize: pick(m['editorFontSize'], const [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        18,
+      ], d.editorFontSize),
+      editorTabSize: pick(m['editorTabSize'], const [2, 4, 8], d.editorTabSize),
+      autoClosePairs: m['autoClosePairs'] as bool? ?? d.autoClosePairs,
+      autoSuggest: m['autoSuggest'] as bool? ?? d.autoSuggest,
+      indentGuides: m['indentGuides'] as bool? ?? d.indentGuides,
+      defaultSpeed: pick(m['defaultSpeed'], const [
+        'slow',
+        'medium',
+        'fast',
+      ], d.defaultSpeed),
+      valueFormat: pick(m['valueFormat'], const [
+        'hex',
+        'dec',
+        'udec',
+        'bin',
+      ], d.valueFormat),
+      historyLimit: pick(m['historyLimit'], const [
+        1000,
+        5000,
+        20000,
+        50000,
+      ], d.historyLimit),
+      reopenLastProject: m['reopenLastProject'] as bool? ?? d.reopenLastProject,
+      checkUpdates: m['checkUpdates'] as bool? ?? d.checkUpdates,
     );
   }
 }
@@ -40,6 +144,7 @@ class WindowGeometry {
   final double? x;
   final double? y;
   final bool maximized;
+  final bool fullscreen;
 
   const WindowGeometry(
     this.width,
@@ -47,10 +152,19 @@ class WindowGeometry {
     this.x,
     this.y,
     this.maximized = false,
+    this.fullscreen = false,
   ]);
 
-  WindowGeometry copyWith({bool? maximized}) =>
-      WindowGeometry(width, height, x, y, maximized ?? this.maximized);
+  /// The same size and position with a different state.
+  WindowGeometry copyWith({bool? maximized, bool? fullscreen}) =>
+      WindowGeometry(
+        width,
+        height,
+        x,
+        y,
+        maximized ?? this.maximized,
+        fullscreen ?? this.fullscreen,
+      );
 
   Map<String, dynamic> toJson() => {
     'width': width,
@@ -58,6 +172,7 @@ class WindowGeometry {
     if (x != null) 'x': x,
     if (y != null) 'y': y,
     'maximized': maximized,
+    'fullscreen': fullscreen,
   };
 
   factory WindowGeometry.fromJson(Map<String, dynamic>? m) {
@@ -68,6 +183,7 @@ class WindowGeometry {
       (m['x'] as num?)?.toDouble(),
       (m['y'] as num?)?.toDouble(),
       m['maximized'] as bool? ?? false,
+      m['fullscreen'] as bool? ?? false,
     );
   }
 }

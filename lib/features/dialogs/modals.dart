@@ -3,14 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:dot_asm/app/app_state.dart';
 import 'package:dot_asm/components/buttons.dart';
-import 'package:dot_asm/components/inputs.dart';
 import 'package:dot_asm/components/layout.dart';
+import 'package:dot_asm/components/selectable_row.dart';
 import 'package:dot_asm/components/modifiers.dart';
 import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/core/model/models.dart';
 import 'package:dot_asm/core/storage/storage.dart';
 import 'package:dot_asm/features/dialogs/developer_dialog.dart';
+import 'package:dot_asm/features/dialogs/onboarding_dialog.dart';
 import 'package:dot_asm/features/dialogs/processor_dialogs.dart';
+import 'package:dot_asm/features/dialogs/settings_widgets.dart';
 import 'package:dot_asm/features/dialogs/project_dialogs.dart';
 import 'package:dot_asm/features/shell/menus.dart' show checkForUpdates;
 import 'package:dot_asm/platform/platform.dart';
@@ -34,6 +36,7 @@ Widget buildActiveModal(BuildContext context, AppState state) {
         ModalSettings() => _SettingsDialog(state: state),
         ModalAbout() => _AboutDialog(state: state),
         ModalDeveloper() => DeveloperDialog(state: state),
+        ModalOnboarding() => OnboardingDialog(state: state),
         ModalUpdateAvailable(:final version) => _UpdateAvailableDialog(
           state: state,
           version: version,
@@ -62,6 +65,8 @@ Widget buildActiveModal(BuildContext context, AppState state) {
 
 enum _SettingsCategory {
   general('General', Icons.tune_rounded),
+  editor('Editor', Icons.code_rounded),
+  simulator('Simulator', Icons.developer_board_rounded),
   storage('Storage & Data', AppIcons.folder);
 
   const _SettingsCategory(this.label, this.icon);
@@ -92,9 +97,15 @@ class _SettingsDialogState extends State<_SettingsDialog> {
 
     return ModalScaffold(
       title: 'Preferences',
-      width: 660,
+      width: 780,
       onClose: () => widget.state.modal = null,
       actions: [
+        Btn(
+          label: 'Reset to defaults',
+          height: 32,
+          outlined: true,
+          onClick: () => _updateSettings((_) => const AppSettings()),
+        ),
         Btn(
           label: 'Done',
           primary: true,
@@ -104,78 +115,55 @@ class _SettingsDialogState extends State<_SettingsDialog> {
       ],
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 460),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Category pills
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: p.field,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: p.border, width: 1),
-              ),
-              child: Row(
+            // The categories, down the left side
+            SizedBox(
+              width: 168,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (final cat in _SettingsCategory.values)
-                    Expanded(
-                      child: ClickableNoRipple(
-                        onClick: () => setState(() => _category = cat),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 140),
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          decoration: BoxDecoration(
-                            color: _category == cat
-                                ? p.panel
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: _category == cat
-                                  ? p.border
-                                  : Colors.transparent,
-                              width: 1,
+                    HoverBuilder(
+                      cursor: SystemMouseCursors.click,
+                      onTap: () => setState(() => _category = cat),
+                      builder: (context, hovered) => SelectableRow(
+                        selected: _category == cat,
+                        hovered: hovered,
+                        height: 34,
+                        margin: const EdgeInsets.only(bottom: 3),
+                        child: Row(
+                          children: [
+                            Icon(
+                              cat.icon,
+                              size: 15,
+                              color: _category == cat ? p.accent : p.muted,
                             ),
-                            boxShadow: _category == cat
-                                ? [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(
-                                        p.dark ? 0.3 : 0.05,
-                                      ),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 1),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                cat.icon,
-                                size: 13,
-                                color: _category == cat ? p.accent : p.muted,
+                            const SizedBox(width: 9),
+                            Expanded(
+                              child: T(
+                                cat.label,
+                                size: 12,
+                                weight: _category == cat
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: _category == cat ? p.text : p.muted,
+                                maxLines: 1,
                               ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: T(
-                                  cat.label,
-                                  size: 11.5,
-                                  weight: _category == cat
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
-                                  color: _category == cat ? p.text : p.muted,
-                                  maxLines: 1,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                 ],
               ),
             ),
-            const SizedBox(height: 14),
+            Container(
+              width: 1,
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              color: p.border.withOpacity(0.7),
+            ),
             Expanded(
               child: SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
@@ -185,6 +173,8 @@ class _SettingsDialogState extends State<_SettingsDialog> {
                     p,
                     settings,
                   ),
+                  _SettingsCategory.editor => _buildEditorTab(settings),
+                  _SettingsCategory.simulator => _buildSimulatorTab(settings),
                   _SettingsCategory.storage => _buildStorageTab(context, p),
                 },
               ),
@@ -238,59 +228,39 @@ class _SettingsDialogState extends State<_SettingsDialog> {
             ),
           ],
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 22),
 
-        // Open at Login
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: p.field,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: p.border, width: 1),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: p.accent.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Icon(Icons.login_rounded, size: 16, color: p.accent),
-                ),
+        SettingsGroup(
+          title: 'Startup',
+          subtitle: 'What the app does when it starts.',
+          children: [
+            SettingToggle(
+              title: 'Reopen the last project',
+              description: 'Start where you left off. When off, the app opens on the start screen.',
+              value: settings.reopenLastProject,
+              onChanged: (v) =>
+                  _updateSettings((s) => s.copyWith(reopenLastProject: v)),
+            ),
+            SettingToggle(
+              title: 'Check for updates on startup',
+              description: 'Look for a newer release on GitHub when the app starts. Nothing else is ever sent.',
+              value: settings.checkUpdates,
+              onChanged: (v) =>
+                  _updateSettings((s) => s.copyWith(checkUpdates: v)),
+            ),
+            SettingRow(
+              title: 'Welcome tour',
+              description:
+                  'A short walkthrough of what ${AppConfig.NAME} does.',
+              trailing: Btn(
+                label: 'Show tour',
+                height: 28,
+                fontSize: 11.5,
+                onClick: () => widget.state.modal = const ModalOnboarding(),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const T(
-                      'Open at Login',
-                      size: 12.5,
-                      weight: FontWeight.w600,
-                    ),
-                    const SizedBox(height: 2),
-                    T(
-                      'Automatically launch ${AppConfig.NAME} when you start or log in to your computer.',
-                      size: 11,
-                      color: p.muted,
-                    ),
-                  ],
-                ),
-              ),
-              AppCheckbox(
-                value: settings.openAtLogin,
-                onChanged: (val) {
-                  _updateSettings((s) => s.copyWith(openAtLogin: val));
-                  widget.state.setOpenAtLogin(val);
-                },
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-        const SizedBox(height: 14),
 
         // App info & version banner
         Container(
@@ -355,6 +325,113 @@ class _SettingsDialogState extends State<_SettingsDialog> {
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  // --- TAB: EDITOR ---
+  Widget _buildEditorTab(AppSettings settings) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SettingsGroup(
+          title: 'Assembly editor',
+          subtitle: 'How the code editor behaves while you type.',
+          children: [
+            SettingChoice<int>(
+              title: 'Font size',
+              description: 'The size of the code in the assembly editor, the processor source and the starter program.',
+              value: settings.editorFontSize,
+              options: {
+                for (final n in const [11, 12, 13, 14, 15, 16, 18]) n: '$n',
+              },
+              onChanged: (v) =>
+                  _updateSettings((s) => s.copyWith(editorFontSize: v)),
+            ),
+            SettingChoice<int>(
+              title: 'Indentation',
+              description: 'Spaces per indent level (Tab key, auto-indent and indent guides).',
+              value: settings.editorTabSize,
+              options: const {2: '2', 4: '4', 8: '8'},
+              onChanged: (v) =>
+                  _updateSettings((s) => s.copyWith(editorTabSize: v)),
+            ),
+            SettingToggle(
+              title: 'Close brackets and quotes',
+              description: 'Typing ( [ or " adds the closing one, and typing it again moves past it.',
+              value: settings.autoClosePairs,
+              onChanged: (v) =>
+                  _updateSettings((s) => s.copyWith(autoClosePairs: v)),
+            ),
+            SettingToggle(
+              title: 'Suggest while typing',
+              description: 'Show instructions, registers and labels as you type. Ctrl+Space always opens them.',
+              value: settings.autoSuggest,
+              onChanged: (v) =>
+                  _updateSettings((s) => s.copyWith(autoSuggest: v)),
+            ),
+            SettingToggle(
+              title: 'Indent guides',
+              description: 'Faint vertical lines at every indent step.',
+              value: settings.indentGuides,
+              onChanged: (v) =>
+                  _updateSettings((s) => s.copyWith(indentGuides: v)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // --- TAB: SIMULATOR ---
+  Widget _buildSimulatorTab(AppSettings settings) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SettingsGroup(
+          title: 'Running programs',
+          subtitle: 'Defaults for projects and the processor view.',
+          children: [
+            SettingChoice<String>(
+              title: 'Run speed for new projects',
+              description: 'How quickly Run executes. Each project remembers its own speed afterwards.',
+              value: settings.defaultSpeed,
+              options: const {
+                'slow': 'Slow',
+                'medium': 'Medium',
+                'fast': 'Fast',
+              },
+              onChanged: (v) =>
+                  _updateSettings((s) => s.copyWith(defaultSpeed: v)),
+            ),
+            SettingChoice<String>(
+              title: 'Show values as',
+              description: 'How registers and memory are shown when the app starts. Changing it in the processor view updates this.',
+              value: settings.valueFormat,
+              options: const {
+                'hex': 'Hex',
+                'dec': 'Signed',
+                'udec': 'Unsigned',
+                'bin': 'Binary',
+              },
+              onChanged: (v) =>
+                  _updateSettings((s) => s.copyWith(valueFormat: v)),
+            ),
+            SettingChoice<int>(
+              title: 'Undo history',
+              description: 'Executed instructions kept for Step back and the trace. More uses more memory.',
+              value: settings.historyLimit,
+              options: const {
+                1000: '1,000',
+                5000: '5,000',
+                20000: '20,000',
+                50000: '50,000',
+              },
+              onChanged: (v) =>
+                  _updateSettings((s) => s.copyWith(historyLimit: v)),
+            ),
+          ],
         ),
       ],
     );

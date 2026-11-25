@@ -7,25 +7,51 @@ import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/features/workspace/editor_logic.dart';
 import 'package:dot_asm/theme/theme.dart';
 
-const double kEditorFontSize = 13;
-const double kEditorLineHeight = 20;
+/// The editor's font size and what follows from it. The size comes from Preferences; the line height, the width of a
+/// character (the font is monospaced, so overlays can be positioned by line and column) and the text styles are derived
+/// from it. [AppShell] applies the preference before the editors build.
+class EditorMetrics {
+  const EditorMetrics._();
 
-/// The editor's text style. A font list must be passed as fallbacks: a comma separated string is read as one name.
-const TextStyle kEditorTextStyle = TextStyle(
-  fontFamily: kMonoFamily,
-  fontFamilyFallback: kMonoFallback,
-  fontSize: kEditorFontSize,
-  height: kEditorLineHeight / kEditorFontSize,
-);
+  /// Sizes offered in Preferences.
+  static const List<int> sizes = [11, 12, 13, 14, 15, 16, 18];
+  static const double defaultSize = 13;
 
-/// Width of one character of the editor font.
-double measureEditorChar() {
-  final tp = TextPainter(
-    text: const TextSpan(text: 'MMMMMMMMMM', style: kEditorTextStyle),
-    textDirection: TextDirection.ltr,
-  )..layout();
-  return tp.width / 10;
+  static double fontSize = defaultSize;
+
+  /// 13 gives 20, the size the layout was drawn for.
+  static double get lineHeight => (fontSize * 20 / 13).roundToDouble();
+
+  /// The editor's text style. A font list must be passed as fallbacks: a comma separated string is read as one name.
+  static TextStyle get textStyle => TextStyle(
+    fontFamily: kMonoFamily,
+    fontFamilyFallback: kMonoFallback,
+    fontSize: fontSize,
+    height: lineHeight / fontSize,
+  );
+
+  /// Forces every line to the same height whatever glyphs it holds.
+  static StrutStyle get strut => StrutStyle(
+    fontSize: fontSize,
+    height: lineHeight / fontSize,
+    forceStrutHeight: true,
+  );
+
+  static final Map<double, double> _widths = {};
+
+  /// Width of one character of the editor font.
+  static double get charWidth => _widths.putIfAbsent(fontSize, () {
+    final tp = TextPainter(
+      text: TextSpan(text: 'MMMMMMMMMM', style: textStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return tp.width / 10;
+  });
 }
+
+double get kEditorFontSize => EditorMetrics.fontSize;
+double get kEditorLineHeight => EditorMetrics.lineHeight;
+TextStyle get kEditorTextStyle => EditorMetrics.textStyle;
 
 // ---------------------------------------------------------------------------------------------------------------
 // Gutter
@@ -42,7 +68,9 @@ class EditorGutter extends StatelessWidget {
     this.breakpointsEnabled = true,
   });
 
-  static const double width = 56;
+  /// Wide enough for a four-digit line number at the current font size.
+  static double get width =>
+      56 + (EditorMetrics.fontSize - 13).clamp(0.0, 6.0) * 3;
 
   /// False for editors that have nothing to break on: no hover dot, no click.
   final bool breakpointsEnabled;
@@ -116,15 +144,11 @@ class EditorGutter extends StatelessWidget {
                             child: Text(
                               '$line',
                               textAlign: TextAlign.right,
-                              strutStyle: const StrutStyle(
-                                fontSize: kEditorFontSize,
-                                height: kEditorLineHeight / kEditorFontSize,
-                                forceStrutHeight: true,
-                              ),
+                              strutStyle: EditorMetrics.strut,
                               style: TextStyle(
                                 fontFamily: kMonoFamily,
                                 fontFamilyFallback: kMonoFallback,
-                                fontSize: 11.5,
+                                fontSize: kEditorFontSize - 1.5,
                                 height: kEditorLineHeight / kEditorFontSize,
                                 color: isCur
                                     ? p.accent

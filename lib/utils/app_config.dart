@@ -9,7 +9,7 @@ final class AppConfig {
 
   static const String NAME = 'dot ASM';
 
-  /// Lower-case, space-free identifier for folders and files (`~/.dotasm`, `dotasm.log`, autostart entry).
+  /// Lower-case, space-free identifier for folders and files (`~/.dotasm`, `dotasm.log`).
   static const String SLUG = 'dotasm';
   static const String COPYRIGHT =
       'Copyright © 2026 dev.prateekthakur. All rights reserved.';

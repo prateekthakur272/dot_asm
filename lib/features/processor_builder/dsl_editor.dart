@@ -302,7 +302,7 @@ class _SourceEditorState extends State<SourceEditor> {
   final ScrollController _hScroll = ScrollController();
   late final FocusNode _focus;
   final Object _tapGroup = Object();
-  final double _charW = measureEditorChar();
+  double get _charW => EditorMetrics.charWidth;
   String _lastText = '';
 
   CompletionResult? _comp;
@@ -1060,13 +1060,7 @@ class _SourceEditorState extends State<SourceEditor> {
                                               blocks: widget.blocks,
                                             ),
                                           ],
-                                          strutStyle: const StrutStyle(
-                                            fontSize: kEditorFontSize,
-                                            height:
-                                                kEditorLineHeight /
-                                                kEditorFontSize,
-                                            forceStrutHeight: true,
-                                          ),
+                                          strutStyle: EditorMetrics.strut,
                                           style: kEditorTextStyle,
                                           decoration:
                                               const InputDecoration.collapsed(

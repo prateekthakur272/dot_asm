@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dot_asm/components/empty_state.dart';
 import 'package:dot_asm/app/app_state.dart';
 import 'package:dot_asm/app/sim_session.dart';
-import 'package:dot_asm/components/drag_devices.dart';
+import 'package:dot_asm/components/layout.dart';
 import 'package:dot_asm/components/modifiers.dart';
 import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/core/sim/machine/machine.dart';
@@ -61,22 +61,10 @@ class WorkspaceView extends StatelessWidget {
                       ],
                     ),
                   ),
-                  MouseRegion(
-                    cursor: SystemMouseCursors.resizeColumn,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      supportedDevices: kDragDevices,
-                      onHorizontalDragUpdate: (d) => state.updateUiState(
-                        (s) => s.copyWith(
-                          panelWidth: (panelW - d.delta.dx).clamp(320.0, 900.0),
-                        ),
-                      ),
-                      child: Container(
-                        width: 5,
-                        color: Colors.transparent,
-                        child: Center(
-                          child: Container(width: 1, color: p.border),
-                        ),
+                  DragBar(
+                    onDrag: (dx) => state.updateUiState(
+                      (s) => s.copyWith(
+                        panelWidth: (panelW - dx).clamp(320.0, 900.0),
                       ),
                     ),
                   ),

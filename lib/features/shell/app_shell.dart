@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:dot_asm/app/app_state.dart';
-import 'package:dot_asm/components/drag_devices.dart';
+import 'package:dot_asm/components/layout.dart';
 import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/features/dialogs/modals.dart';
 import 'package:dot_asm/features/processor_builder/builder_view.dart';
 import 'package:dot_asm/features/projects/gallery_view.dart';
 import 'package:dot_asm/features/projects/home_view.dart';
 import 'package:dot_asm/features/projects/sidebar.dart';
+import 'package:dot_asm/features/workspace/editor_parts.dart'
+    show EditorMetrics;
 import 'package:dot_asm/features/workspace/workspace_view.dart';
 import 'package:dot_asm/features/shell/palette.dart';
 import 'package:dot_asm/features/shell/status_bar.dart';
@@ -27,6 +29,8 @@ class AppShell extends StatelessWidget {
       builder: (context, _) {
         final p = context.pal;
         final ui = state.uiState;
+        // The editors read their font size from here; set it before they build.
+        EditorMetrics.fontSize = state.settings.editorFontSize.toDouble();
 
         return Stack(
           children: [
@@ -87,8 +91,7 @@ class AppShell extends StatelessWidget {
                           width: ui.sidebarWidth.clamp(200.0, 380.0),
                           child: ProjectsSidebar(state: state),
                         ),
-                        _PaneDivider(
-                          color: p.border,
+                        DragBar(
                           onDrag: (delta) {
                             state.updateUiState(
                               (s) => s.copyWith(
@@ -165,29 +168,6 @@ class AppShell extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _PaneDivider extends StatelessWidget {
-  const _PaneDivider({required this.color, required this.onDrag});
-  final Color color;
-  final ValueChanged<double> onDrag;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.resizeColumn,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        supportedDevices: kDragDevices,
-        onHorizontalDragUpdate: (d) => onDrag(d.delta.dx),
-        child: Container(
-          width: 5,
-          color: Colors.transparent,
-          child: Center(child: Container(width: 1, color: color)),
-        ),
-      ),
     );
   }
 }

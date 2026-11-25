@@ -95,7 +95,7 @@ class _Halt implements Exception {}
 
 /// A processor built from a [ProcessorSpec]: registers, flags, pc, memory and the instruction interpreter.
 class Machine implements ExprEnv {
-  Machine(this.spec)
+  Machine(this.spec, {this.maxHistory = 20000})
     : memory = Memory(spec),
       decoder = Decoder(spec),
       _regs = List.filled(spec.registerCount, 0),
@@ -124,7 +124,9 @@ class Machine implements ExprEnv {
 
   /// Executed instructions, newest last, for [undo].
   final List<StepTrace> history = [];
-  static const maxHistory = 20000;
+
+  /// How many executed instructions are kept for [undo]; the oldest are dropped beyond it.
+  int maxHistory;
 
   int get entry => program?.entry ?? spec.resetPc;
 

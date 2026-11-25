@@ -331,6 +331,10 @@ List<PlatformMenuItem> buildMacMenus(AppState state, VoidCallback onQuit) {
         PlatformMenuItemGroup(
           members: [
             PlatformMenuItem(
+              label: 'Welcome Tour…',
+              onSelected: () => state.modal = const ModalOnboarding(),
+            ),
+            PlatformMenuItem(
               label: 'Check for Updates…',
               onSelected: () => checkForUpdates(state),
             ),
@@ -497,6 +501,11 @@ Map<String, List<ContextMenuItem>> buildWindowsLinuxMenuItems({
       ),
     ],
     'Help': [
+      ContextMenuItem(
+        label: 'Welcome Tour…',
+        icon: Icons.waving_hand_outlined,
+        action: () => state.modal = const ModalOnboarding(),
+      ),
       ContextMenuItem(
         label: 'Check for Updates…',
         icon: Icons.system_update_rounded,

@@ -55,8 +55,12 @@ Future<void> main() async {
 
   await wm.windowManager.waitUntilReadyToShow(
     wm.WindowOptions(
+      // Never smaller than the window may be (a screen that changed could have left a tiny size behind).
       size: saved != null
-          ? Size(saved.width, saved.height)
+          ? Size(
+              saved.width < 840 ? 840 : saved.width,
+              saved.height < 520 ? 520 : saved.height,
+            )
           : const Size(1360, 860),
       minimumSize: const Size(840, 520),
       center: !placed,
@@ -68,7 +72,9 @@ Future<void> main() async {
       if (saved != null && placed) {
         await wm.windowManager.setPosition(Offset(saved.x!, saved.y!));
       }
-      if (saved != null && saved.maximized) {
+      if (saved != null && saved.fullscreen) {
+        await wm.windowManager.setFullScreen(true);
+      } else if (saved != null && saved.maximized) {
         await wm.windowManager.maximize();
       }
     },
@@ -141,10 +147,29 @@ class _DotAsmAppState extends State<DotAsmApp>
     HardwareKeyboard.instance.addHandler(_onKey);
     wm.windowManager.addListener(this);
     // Check for a newer GitHub release after the first frame so it never delays startup.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdateOnce());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_syncMaximized());
+      _showOnboardingOnce();
+      _checkForUpdateOnce();
+    });
+  }
+
+  /// The window may have been restored maximized: make the title bar's maximize button agree.
+  Future<void> _syncMaximized() async {
+    final max = await wm.windowManager.isMaximized();
+    if (mounted && max != maximized) setState(() => maximized = max);
+  }
+
+  /// The first time the app runs, open the welcome tour. It is marked as seen right away, so closing it any way at all
+  /// (even by clicking outside) means it does not come back.
+  void _showOnboardingOnce() {
+    if (!AppStore.needsOnboarding) return;
+    AppStore.setFlag('onboarding_completed', true);
+    state.modal = const ModalOnboarding();
   }
 
   Future<void> _checkForUpdateOnce() async {
+    if (!state.settings.checkUpdates) return;
     final result = await UpdateChecker.check(AppMetadata.version);
     if (!mounted) return;
     if (result.hasUpdate) {
@@ -182,16 +207,20 @@ class _DotAsmAppState extends State<DotAsmApp>
   Future<void> _saveBounds() async {
     try {
       final max = await wm.windowManager.isMaximized();
-      if (!max &&
-          !await wm.windowManager.isFullScreen() &&
-          !await wm.windowManager.isMinimized()) {
+      final full = await wm.windowManager.isFullScreen();
+      // Only a normal window tells us its own size; a maximized or full-screen one keeps the size it will return to.
+      if (!max && !full && !await wm.windowManager.isMinimized()) {
         final r = await wm.windowManager.getBounds();
         _floating = WindowGeometry(r.width, r.height, r.left, r.top);
       }
-      final f = _floating;
-      if (f != null) {
-        AppStore.saveWindow(f.copyWith(maximized: max));
+      // Nothing to return to yet (it was never a normal window this session): use whatever size it has.
+      if (_floating == null) {
+        final r = await wm.windowManager.getBounds();
+        _floating = WindowGeometry(r.width, r.height, r.left, r.top);
       }
+      AppStore.saveWindow(
+        _floating!.copyWith(maximized: max, fullscreen: full),
+      );
     } catch (e, st) {
       Log.warning('window', 'Cannot save window geometry', e, st);
     }
@@ -214,6 +243,12 @@ class _DotAsmAppState extends State<DotAsmApp>
     setState(() => maximized = false);
     _saveBoundsSoon();
   }
+
+  @override
+  void onWindowEnterFullScreen() => _saveBoundsSoon();
+
+  @override
+  void onWindowLeaveFullScreen() => _saveBoundsSoon();
 
   @override
   void onWindowClose() => quit();

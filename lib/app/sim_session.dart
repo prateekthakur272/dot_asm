@@ -59,12 +59,23 @@ class SimSession extends ChangeNotifier {
     return program!.addressToLine[m.pc];
   }
 
+  int _historyLimit = 20000;
+
+  /// How many steps can be undone. Applies to the running machine at once.
+  set historyLimit(int n) {
+    _historyLimit = n;
+    final m = machine;
+    if (m == null) return;
+    m.maxHistory = n;
+    if (m.history.length > n) m.history.removeRange(0, m.history.length - n);
+  }
+
   /// Switches to another processor; clears the program.
   void configure(ProcessorSpec s) {
     pause();
     spec = s;
     _assembler = Assembler(s);
-    machine = Machine(s);
+    machine = Machine(s, maxHistory: _historyLimit);
     program = null;
     errors = const [];
     lastTrace = null;

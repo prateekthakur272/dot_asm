@@ -234,6 +234,7 @@ class EditorOps {
     TextEditingValue now, {
     int unit = kTabSize,
     bool blocks = false,
+    bool pairs = true,
   }) {
     if (!now.selection.isCollapsed ||
         old.composing.isValid && !old.composing.isCollapsed) {
@@ -298,6 +299,8 @@ class EditorOps {
           );
         }
       }
+      // Brackets and quotes close themselves only when that is switched on.
+      if (!pairs) return null;
       // Selection wrapped in a pair.
       if (removed > 0 && _pairs.containsKey(c)) {
         final sel = old.text.substring(os.start, os.end);
@@ -332,7 +335,7 @@ class EditorOps {
     }
 
     // Backspace between an empty pair
-    if (delta == -1 && removed == 0 && os.start > 0) {
+    if (pairs && delta == -1 && removed == 0 && os.start > 0) {
       final gone = old.text[os.start - 1];
       final next = os.start < old.text.length ? old.text[os.start] : '';
       if (_pairs[gone] == next && next.isNotEmpty) {
@@ -451,18 +454,30 @@ class EditorOps {
 
 /// Plugs [EditorOps.assist] into a text field.
 class AssistFormatter extends TextInputFormatter {
-  const AssistFormatter({this.unit = kTabSize, this.blocks = false});
+  const AssistFormatter({
+    this.unit = kTabSize,
+    this.blocks = false,
+    this.pairs = true,
+  });
 
-  /// Spaces per indent level, and whether `{ }` blocks drive the indentation.
+  /// Spaces per indent level, whether `{ }` blocks drive the indentation, and whether brackets and quotes close
+  /// themselves.
   final int unit;
   final bool blocks;
+  final bool pairs;
 
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) =>
-      EditorOps.assist(oldValue, newValue, unit: unit, blocks: blocks) ??
+      EditorOps.assist(
+        oldValue,
+        newValue,
+        unit: unit,
+        blocks: blocks,
+        pairs: pairs,
+      ) ??
       newValue;
 }
 

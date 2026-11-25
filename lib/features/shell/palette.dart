@@ -180,7 +180,7 @@ class _CommandPaletteState extends State<CommandPalette> {
         ),
       _PaletteItem(
         title: 'Open Preferences',
-        subtitle: 'Change theme, open at login and view storage',
+        subtitle: 'Theme, editor, simulator and startup options',
         category: 'Actions',
         icon: AppIcons.settings,
         action: run(() => state.modal = const ModalSettings()),
@@ -212,6 +212,13 @@ class _CommandPaletteState extends State<CommandPalette> {
         category: 'Actions',
         icon: AppIcons.folder,
         action: run(() => Platform.reveal(AppStore.dir)),
+      ),
+      _PaletteItem(
+        title: 'Welcome Tour',
+        subtitle: 'A short walkthrough of what dot ASM does',
+        category: 'Help',
+        icon: Icons.waving_hand_outlined,
+        action: run(() => state.modal = const ModalOnboarding()),
       ),
       _PaletteItem(
         title: 'Developer & GitHub',

@@ -19,6 +19,10 @@ class ModalDeveloper extends AppModal {
   const ModalDeveloper();
 }
 
+class ModalOnboarding extends AppModal {
+  const ModalOnboarding();
+}
+
 class ModalUpdateAvailable extends AppModal {
   const ModalUpdateAvailable(this.version);
   final String version;

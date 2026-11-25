@@ -50,7 +50,9 @@ The app remembers where they are and lists the most recent on the start screen.
 
 ## Desktop polish
 
-- A black and grey theme in dark and light, following the system by default.
+- A five-step welcome tour on first run (and from the Help menu).
+- A black and grey theme in dark and light, following the system by default, and preferences for the editor, the
+  simulator and startup.
 - A command palette (`⌘K` / `Ctrl+K`) and platform-aware shortcuts.
 - A native look on macOS (traffic lights, system menu bar) and an in-window menu with window buttons on Windows and Linux.
 - Window position and sidebar width are remembered, and the window only appears once it is ready.

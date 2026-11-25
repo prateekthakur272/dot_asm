@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dot_asm/app/app_state.dart';
+import 'package:dot_asm/core/model/models.dart' show AppSettings;
 import 'package:dot_asm/core/sim/spec/processor_spec.dart';
 import 'package:dot_asm/features/workspace/editor_logic.dart';
 import 'package:dot_asm/features/workspace/editor_parts.dart';
@@ -142,8 +143,9 @@ class _CodeEditorState extends State<CodeEditor> {
   final ScrollController _hScroll = ScrollController();
   late final FocusNode _focus;
   final Object _tapGroup = Object();
-  final double _charW = measureEditorChar();
+  double get _charW => EditorMetrics.charWidth;
   int _revision = -1;
+  AppSettings? _settingsSeen;
   String _lastText = '';
 
   // Suggestions
@@ -204,7 +206,11 @@ class _CodeEditorState extends State<CodeEditor> {
       if (_findOpen) _recomputeMatches();
     }
     final sel = _controller.selection;
-    if (changed && !_suppressPopup && sel.isValid && sel.isCollapsed) {
+    if (changed &&
+        !_suppressPopup &&
+        state.settings.autoSuggest &&
+        sel.isValid &&
+        sel.isCollapsed) {
       _updateCompletion();
     } else if (!changed && _comp != null) {
       // Moving the caret out of the word closes the list.
@@ -217,6 +223,11 @@ class _CodeEditorState extends State<CodeEditor> {
   }
 
   void _onState() {
+    // Preferences (tab size, guides ...) apply to the open editor as soon as they change.
+    if (mounted && _settingsSeen != state.settings) {
+      _settingsSeen = state.settings;
+      setState(() {});
+    }
     if (_revision != state.sourceRevision) {
       _revision = state.sourceRevision;
       final spec = state.activeProcessor;
@@ -371,7 +382,15 @@ class _CodeEditorState extends State<CodeEditor> {
     }
     final v = _controller.value;
     if (k == LogicalKeyboardKey.tab && !mod && !alt) {
-      return done(() => _apply(EditorOps.indent(v, outdent: shift)));
+      return done(
+        () => _apply(
+          EditorOps.indent(
+            v,
+            outdent: shift,
+            size: state.settings.editorTabSize,
+          ),
+        ),
+      );
     }
     if (mod && !alt && k == LogicalKeyboardKey.slash) {
       return done(() {
@@ -612,12 +631,15 @@ class _CodeEditorState extends State<CodeEditor> {
       selected: sel.isValid ? sel.end - sel.start : 0,
       lines: '\n'.allMatches(text).length + 1,
       hint: _hint(text),
+      tabSize: state.settings.editorTabSize,
     );
   }
 
   /// Faint vertical lines at every indent step, so nesting is easy to follow.
   List<Widget> _indentGuides(List<String> lines, Pal p) {
     final out = <Widget>[];
+    if (!state.settings.indentGuides) return out;
+    final tab = state.settings.editorTabSize;
     for (var i = 0; i < lines.length; i++) {
       final l = lines[i];
       if (l.trim().isEmpty) continue;
@@ -625,10 +647,10 @@ class _CodeEditorState extends State<CodeEditor> {
       while (n < l.length && l[n] == ' ') {
         n++;
       }
-      for (var c = kTabSize; c < n + 1 && c <= n; c += kTabSize) {
+      for (var c = tab; c <= n; c += tab) {
         out.add(
           Positioned(
-            left: 8 + (c - kTabSize) * _charW,
+            left: 8 + (c - tab) * _charW,
             top: 12 + i * kEditorLineHeight,
             width: 1,
             height: kEditorLineHeight,
@@ -883,15 +905,16 @@ class _CodeEditorState extends State<CodeEditor> {
                                                   RegExp(r'\t'),
                                                   replacementString: '    ',
                                                 ),
-                                                const AssistFormatter(),
+                                                AssistFormatter(
+                                                  unit: state
+                                                      .settings
+                                                      .editorTabSize,
+                                                  pairs: state
+                                                      .settings
+                                                      .autoClosePairs,
+                                                ),
                                               ],
-                                              strutStyle: const StrutStyle(
-                                                fontSize: kEditorFontSize,
-                                                height:
-                                                    kEditorLineHeight /
-                                                    kEditorFontSize,
-                                                forceStrutHeight: true,
-                                              ),
+                                              strutStyle: EditorMetrics.strut,
                                               style: kEditorTextStyle,
                                               decoration:
                                                   const InputDecoration.collapsed(

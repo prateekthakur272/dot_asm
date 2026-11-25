@@ -39,6 +39,7 @@ class AppStore {
   static String get _settingsFile => p.join(dir, 'settings.json');
   static String get _stateFile => p.join(dir, 'state.json');
   static String get _prefsFile => p.join(dir, 'prefs.json');
+  static String get _windowFile => p.join(dir, 'window.json');
 
   /// True when nothing has been saved yet: a fresh installation.
   static bool isFirstRun() => !File(_settingsFile).existsSync();
@@ -61,6 +62,9 @@ class AppStore {
     final v = flag(key);
     return v is String ? v : null;
   }
+
+  /// True until the welcome tour has been shown once.
+  static bool get needsOnboarding => flag('onboarding_completed') != true;
 
   /// Saves a flag; a null [value] removes it.
   static void setFlag(String key, Object? value) {
@@ -393,9 +397,32 @@ class AppStore {
     }
   }
 
-  // Window geometry convenience
-  static WindowGeometry? loadWindow() => loadState().window;
+  // The window's size, position and state live in their own file: `state.json` is rewritten whenever a layout setting
+  // changes, and that must never put an old window size back.
 
-  static void saveWindow(WindowGeometry window) =>
-      saveState(loadState().copyWith(window: window));
+  /// The window as it was left, or null the first time. Falls back to the copy older versions kept in `state.json`.
+  static WindowGeometry? loadWindow() {
+    try {
+      final f = File(_windowFile);
+      if (f.existsSync()) {
+        return WindowGeometry.fromJson(
+          Json.obj(Json.parse(f.readAsStringSync())),
+        );
+      }
+    } catch (e, st) {
+      Log.warning(_tag, 'Failed to load the window geometry', e, st);
+    }
+    return loadState().window;
+  }
+
+  static void saveWindow(WindowGeometry window) {
+    try {
+      File(_windowFile).writeAsStringSync(
+        Json.encode(window.toJson(), pretty: true),
+        flush: true,
+      );
+    } catch (e, st) {
+      Log.warning(_tag, 'Failed to save the window geometry', e, st);
+    }
+  }
 }

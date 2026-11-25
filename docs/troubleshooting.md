@@ -7,7 +7,7 @@ Data Folder** on macOS) to open it.
 
 | File | Purpose |
 |---|---|
-| `settings.json` | Preferences: theme, open at login |
+| `settings.json` | Preferences (**Preferences** in the app) |
 | `state.json` | Window position, sidebar, the open project and view |
 | `prefs.json` | Small flags: the dismissed update, the last project location, recent projects |
 | `projects.json` | Where your projects are (the projects themselves are not stored here) |

@@ -8,7 +8,7 @@ dot ASM mirrors the architecture and desktop patterns of the sibling `devspace` 
 |---|---|---|
 | `core/` | Models, the block language (`core/dsl`), the simulator (`core/sim`), storage (`AppStore`), logging (`Log`) | `utils/` |
 | `utils/` | `AppConfig`, `AppMetadata`, `Paths`, `Json`, `IssueReport`, `UpdateChecker` | `core/logging`, `core/storage` |
-| `theme/`, `platform/` | `Pal` palette + icons; OS bridges (`Platform`, `LaunchAtStartup`) | `core/logging`, `utils/` |
+| `theme/`, `platform/` | `Pal` palette + icons; OS bridges (`Platform`) | `core/logging`, `utils/` |
 | `components/` | Reusable widgets: `Btn`, `IconBtn`, `T`, `ModalScaffold`, `SplitPane`, `ContextMenu`, `HoverBuilder` | `theme/` |
 | `app/` | `AppState` (`ChangeNotifier`), sealed `AppModal` | `core/`, `platform/` |
 | `features/*` | `shell/` (window, menus, palette, status bar), `dialogs/` (settings, about, developer, update) | everything above |
@@ -33,3 +33,6 @@ dot ASM mirrors the architecture and desktop patterns of the sibling `devspace` 
 - Scrolling uses `ClampingScrollPhysics`; no overscroll glow, no scrollbars.
 - Shortcuts are platform-aware (`⌘` on macOS, `Ctrl` elsewhere). `Cmd/Ctrl+K` opens the command palette.
 - Never swallow errors silently: log through `Log` with a tag.
+- Docs and marketplace: when a feature, shortcut or file format changes, update `README.md` and `docs/`. The marketplace
+  listing is `.marketplace/app-info.yaml` (keep it in step with `AppConfig.TAGLINE` / `DESCRIPTION`), its icon and
+  `screenshots/`; re-render the images with `flutter test tool/screenshots.dart` (macOS) when the UI changes.

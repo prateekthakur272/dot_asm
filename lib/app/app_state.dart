@@ -15,7 +15,6 @@ import 'package:dot_asm/core/model/project.dart';
 import 'package:dot_asm/core/sim/dsl/processor_dsl.dart';
 import 'package:dot_asm/core/sim/spec/processor_spec.dart';
 import 'package:dot_asm/core/storage/storage.dart';
-import 'package:dot_asm/platform/launch_at_startup.dart';
 import 'package:dot_asm/platform/platform.dart';
 
 export 'package:dot_asm/app/modal.dart';
@@ -165,6 +164,7 @@ class AppState with ChangeNotifier {
   void _init() {
     _settings = AppStore.loadSettings();
     _uiState = AppStore.loadState();
+    sim.historyLimit = _settings.historyLimit;
     sim.addListener(notifyListeners);
     sim.onPersist = _saveSimConfig;
 
@@ -177,7 +177,9 @@ class AppState with ChangeNotifier {
 
     _loadProjects();
     final last = _uiState.activeProjectId;
-    if (last != null && _projects.any((x) => x.path == last)) {
+    if (_settings.reopenLastProject &&
+        last != null &&
+        _projects.any((x) => x.path == last)) {
       openProject(last, notify: false);
     } else if (_uiState.activeView != 'home') {
       _uiState = _uiState.copyWith(
@@ -185,7 +187,6 @@ class AppState with ChangeNotifier {
         clearActiveProject: true,
       );
     }
-    unawaited(_syncOpenAtLogin());
   }
 
   // --- Project list ---
@@ -571,6 +572,7 @@ class AppState with ChangeNotifier {
         processor: ref,
         created: now,
         updated: now,
+        speed: _settings.defaultSpeed,
       );
       AppStore.writeProjectConfig(path, config);
       final project = Project(path: path, config: config);
@@ -769,6 +771,7 @@ class AppState with ChangeNotifier {
   void updateSettings(AppSettings newSettings) {
     _settings = newSettings;
     AppStore.saveSettings(_settings);
+    sim.historyLimit = _settings.historyLimit;
     notifyListeners();
   }
 
@@ -779,25 +782,6 @@ class AppState with ChangeNotifier {
           : ThemeMode.dark,
     ),
   );
-
-  /// Toggles whether the app launches automatically at user login / system startup.
-  Future<void> setOpenAtLogin(bool enable) async {
-    _settings = _settings.copyWith(openAtLogin: enable);
-    AppStore.saveSettings(_settings);
-    await LaunchAtStartup.setEnabled(enable);
-    notifyListeners();
-  }
-
-  /// Re-registers the login item when the setting is on but the OS entry went missing (e.g. the app moved).
-  Future<void> _syncOpenAtLogin() async {
-    try {
-      if (_settings.openAtLogin && !await LaunchAtStartup.isEnabled()) {
-        await LaunchAtStartup.setEnabled(true);
-      }
-    } catch (e, st) {
-      Log.warning(_tag, 'Could not sync open-at-login', e, st);
-    }
-  }
 
   void updateUiState(SavedState Function(SavedState current) update) {
     _uiState = update(_uiState);

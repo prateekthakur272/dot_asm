@@ -20,7 +20,7 @@ App data (`~/.dotasm`):
 
 | File | Contents |
 |---|---|
-| `settings.json` | `AppSettings`: theme mode, open at login |
+| `settings.json` | `AppSettings`: theme, editor, simulator and startup preferences |
 | `state.json` | `SavedState`: sidebar, window geometry, open view |
 | `prefs.json` | Small flags: dismissed update version, last project location |
 | `projects.json` | The folders of the known projects (the projects themselves are not stored here) |

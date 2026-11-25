@@ -40,7 +40,10 @@ class ProcessorPanel extends StatefulWidget {
 }
 
 class _ProcessorPanelState extends State<ProcessorPanel> {
-  ValueFormat _format = ValueFormat.hex;
+  late ValueFormat _format = ValueFormat.values.firstWhere(
+    (f) => f.name == widget.state.settings.valueFormat,
+    orElse: () => ValueFormat.hex,
+  );
   int? _memTarget;
   int _memTick = 0;
 
@@ -143,7 +146,13 @@ class _ProcessorPanelState extends State<ProcessorPanel> {
                       alignment: Alignment.centerRight,
                       child: _FormatMenu(
                         value: _format,
-                        onChanged: (f) => setState(() => _format = f),
+                        onChanged: (f) {
+                          setState(() => _format = f);
+                          // The choice is remembered as the default for next time.
+                          state.updateSettings(
+                            state.settings.copyWith(valueFormat: f.name),
+                          );
+                        },
                       ),
                     ),
                   ),

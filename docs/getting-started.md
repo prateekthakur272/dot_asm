@@ -15,6 +15,12 @@ show a SmartScreen warning.
 
 To build from source instead, see [building and releasing](building-and-releasing.md).
 
+## First run
+
+The first time you start dot ASM, a short **welcome tour** explains what the app does, how projects work, what to watch while
+a program runs, and how to get started. It ends with buttons to create a project, browse the processor gallery or open
+an existing project. Open it again any time from **Help ▸ Welcome Tour…** or the command palette (`⌘K`).
+
 ## Your first program
 
 1. Click **New project** (`⌘N` / `Ctrl+N`) in the sidebar or on the start screen.

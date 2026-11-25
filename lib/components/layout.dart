@@ -31,7 +31,6 @@ class SplitPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.pal;
     return LayoutBuilder(
       builder: (context, constraints) {
         final totalWidth = constraints.maxWidth.clamp(1.0, double.infinity);
@@ -48,24 +47,64 @@ class SplitPane extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(width: firstWidth, child: first),
-            MouseRegion(
-              cursor: SystemMouseCursors.resizeColumn,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                // Critical desktop rule: exclude trackpad so two-finger scroll does not resize dividers
-                supportedDevices: kDragDevices,
-                onHorizontalDragUpdate: (d) => onDrag(d.delta.dx),
-                child: Container(
-                  width: dividerWidth,
-                  color: Colors.transparent,
-                  child: Center(child: Container(width: 1, color: p.border)),
-                ),
-              ),
-            ),
+            DragBar(width: dividerWidth, onDrag: onDrag),
             Expanded(child: second),
           ],
         );
       },
+    );
+  }
+}
+
+/// A vertical bar between two panes that is dragged sideways to resize them. A thin line at rest; on hover and while
+/// dragging it thickens and takes the accent colour, so it is clear that it can be grabbed.
+class DragBar extends StatefulWidget {
+  const DragBar({super.key, required this.onDrag, this.width = 5});
+
+  /// Called with the horizontal movement of every drag update.
+  final ValueChanged<double> onDrag;
+  final double width;
+
+  @override
+  State<DragBar> createState() => _DragBarState();
+}
+
+class _DragBarState extends State<DragBar> {
+  bool _hovered = false;
+  bool _dragging = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pal;
+    final active = _hovered || _dragging;
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        // Critical desktop rule: exclude trackpad so two-finger scroll does not resize dividers
+        supportedDevices: kDragDevices,
+        onHorizontalDragStart: (_) => setState(() => _dragging = true),
+        onHorizontalDragEnd: (_) => setState(() => _dragging = false),
+        onHorizontalDragCancel: () => setState(() => _dragging = false),
+        onHorizontalDragUpdate: (d) => widget.onDrag(d.delta.dx),
+        child: SizedBox(
+          width: widget.width,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              width: active ? 3 : 1,
+              decoration: BoxDecoration(
+                color: active
+                    ? p.accent.withOpacity(_dragging ? 0.9 : 0.6)
+                    : p.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

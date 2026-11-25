@@ -15,7 +15,7 @@ dot_asm/
     components/            reusable widgets (buttons, inputs, selectable rows, context menu, empty states)
     core/                  pure Dart: models, the block language (dsl), the simulator (sim), storage, logging
     features/              screens: shell, projects, workspace, processor_builder, dialogs
-    platform/              OS bridges (window helpers, open at login)
+    platform/              OS bridges (opening, revealing and copying through the system)
     theme/                 palette (Pal), theme, icons
     utils/                 AppConfig, AppMetadata, paths, issue report, update checker
   test/                    unit, engine and widget tests (test/sim: one file per processor)

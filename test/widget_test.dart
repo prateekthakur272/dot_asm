@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,6 +9,7 @@ import 'support/templates.dart';
 import 'package:dot_asm/app/app_state.dart';
 import 'package:dot_asm/core/storage/storage.dart';
 import 'package:dot_asm/features/projects/sidebar.dart';
+import 'package:dot_asm/components/layout.dart';
 import 'package:dot_asm/features/shell/app_shell.dart';
 import 'package:dot_asm/features/shell/window_chrome.dart';
 import 'package:dot_asm/theme/theme.dart';
@@ -70,7 +72,8 @@ void main() {
     state.modal = const ModalSettings();
     await tester.pump();
     expect(find.text('Preferences'), findsOneWidget);
-    expect(find.text('Open at Login'), findsOneWidget);
+    expect(find.text('Reopen the last project'), findsOneWidget);
+    expect(find.text('Open at Login'), findsNothing); // removed for good
 
     state.modal = const ModalAbout();
     await tester.pump();
@@ -216,4 +219,53 @@ void main() {
       expect(find.byType(AppHeader), findsOneWidget);
     },
   );
+
+  testWidgets('the drag bar lights up while the pointer is over it', (
+    tester,
+  ) async {
+    double moved = 0;
+    await tester.pumpWidget(
+      PalScope(
+        pal: DotAsmTheme.palFor(true),
+        child: MaterialApp(
+          home: Scaffold(
+            body: Row(
+              children: [
+                const Expanded(child: SizedBox()),
+                DragBar(onDrag: (d) => moved += d),
+                const Expanded(child: SizedBox()),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    double lineWidth() => tester
+        .getSize(
+          find.descendant(
+            of: find.byType(DragBar),
+            matching: find.byType(AnimatedContainer),
+          ),
+        )
+        .width;
+    expect(lineWidth(), 1);
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(tester.getCenter(find.byType(DragBar)));
+    await tester.pump(); // the animation starts on the first frame
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lineWidth(), 3);
+
+    await mouse.moveTo(const Offset(5, 5));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lineWidth(), 1);
+
+    // Dragging still reports the movement.
+    await tester.drag(find.byType(DragBar), const Offset(30, 0));
+    await tester.pump();
+    expect(moved, greaterThan(0));
+  });
 }

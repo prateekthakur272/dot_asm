@@ -130,6 +130,10 @@ copy its source. The file format is described in [PROCESSORS.md](PROCESSORS.md).
 
 ![The processor source](screenshots/builder-source.png)
 
+## The welcome tour
+
+The tour that appears on first run can be reopened from **Help ▸ Welcome Tour…** or the command palette.
+
 ## Command palette
 
 `⌘K` / `Ctrl+K` opens a search over everything you can do: create or open a project, run, step, assemble, switch tabs,
@@ -139,9 +143,26 @@ open the gallery or the builder, change the theme. Type a few letters and press 
 
 ## Preferences and updates
 
-Open **Preferences** (`⌘,` / `Ctrl+,`) to choose the theme (system, dark or light) and whether the app opens at login.
-The app checks GitHub for a newer release shortly after it starts and shows a badge in the status bar when there is one.
-**Check for Updates…** in the menu does it on demand. Nothing else is ever sent anywhere.
+Open **Preferences** (`⌘,` / `Ctrl+,`). **Reset to defaults** restores everything on all tabs.
+
+| Tab | Setting | What it does |
+|---|---|---|
+| **General** | Theme | System, dark or light |
+| | Reopen the last project | Start where you left off; when off the app opens on the start screen |
+| | Check for updates on startup | Look for a newer GitHub release when the app starts |
+| | Welcome tour | Show the walkthrough again |
+| **Editor** | Font size | 11 to 18 points, for the assembly editor, the processor source and the starter program |
+| | Indentation | 2, 4 or 8 spaces per indent level (Tab, auto-indent, indent guides) |
+| | Close brackets and quotes | Typing `(`, `[` or `"` adds the closing one |
+| | Suggest while typing | Open the suggestion list automatically (`Ctrl+Space` always works) |
+| | Indent guides | Faint vertical lines at every indent step |
+| **Simulator** | Run speed for new projects | Slow, medium or fast; each project then remembers its own |
+| | Show values as | Hex, signed, unsigned or binary; changing it in the processor view updates this |
+| | Undo history | How many executed instructions Step back and the trace keep (1,000 to 50,000) |
+| **Storage & Data** | | Where the settings, state and log live, with buttons to open them |
+
+The app checks GitHub for a newer release shortly after it starts (unless you turned that off) and shows a badge in the
+status bar when there is one. **Check for Updates…** in the menu does it on demand. Nothing else is ever sent anywhere.
 
 The bottom status bar has quick buttons for the sidebar, preferences, About, the developer's links (right-click for more)
 and *Report an issue*, plus the open processor, the live PC and the app version.
