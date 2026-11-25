@@ -46,6 +46,18 @@ class T extends StatelessWidget {
   }
 }
 
+/// The monospaced font. A font list must be given as fallbacks: a comma separated string is read as one family name.
+const String kMonoFamily = 'Menlo';
+const List<String> kMonoFallback = [
+  'SFMono-Regular',
+  'Monaco',
+  'Consolas',
+  'Liberation Mono',
+  'DejaVu Sans Mono',
+  'Courier New',
+  'monospace',
+];
+
 /// Monospaced text helper for paths, hashes, commands.
 class MonoText extends StatelessWidget {
   const MonoText(
@@ -76,7 +88,8 @@ class MonoText extends StatelessWidget {
       overflow: overflow,
       softWrap: softWrap,
       style: TextStyle(
-        fontFamily: 'SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
+        fontFamily: kMonoFamily,
+        fontFamilyFallback: kMonoFallback,
         fontSize: size,
         fontWeight: weight ?? FontWeight.w400,
         color: color ?? p.text,

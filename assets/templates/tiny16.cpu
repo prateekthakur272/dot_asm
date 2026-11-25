@@ -1,0 +1,369 @@
+# dot ASM processor definition. Edit here or in the processor builder.
+processor tiny16 "Tiny-16 (teaching CPU)" {
+  arch custom
+  vendor "dot ASM"
+  year 2026
+  era modern
+  tags RISC Educational 16-bit
+  describe "A small 16-bit RISC designed for learning: 8 registers, fixed 16-bit instructions, 3 instruction formats. A good starting point for your own processor."
+
+  word 16 little
+  fetch 16
+  aligned
+  comments "#" ";" "//"
+
+  registers r count 8 width 16 {
+    zero 0
+    alias zero=0 ra=6 sp=7
+  }
+  init sp=0x7ffe
+  reset 0x0
+  pipeline IF ID EX MEM WB
+
+  memory {
+    text  at 0x0 size 0x2000 perms rx role text
+    data  at 0x4000 size 0x2000 perms rw role data
+    stack at 0x7000 size 0x1000 perms rw role stack
+  }
+
+  instruction add "rd, rs1, rs2" {
+    size 16
+    match 0xf007 0x0
+    operand rd reg [11:9]
+    operand rs1 reg [8:6]
+    operand rs2 reg [5:3]
+    describe "rd = rs1 + rs2"
+    exec {
+      rd = rs1 + rs2;
+    }
+  }
+
+  instruction sub "rd, rs1, rs2" {
+    size 16
+    match 0xf007 0x1
+    operand rd reg [11:9]
+    operand rs1 reg [8:6]
+    operand rs2 reg [5:3]
+    describe "rd = rs1 - rs2"
+    exec {
+      rd = rs1 - rs2;
+    }
+  }
+
+  instruction and "rd, rs1, rs2" {
+    size 16
+    match 0xf007 0x2
+    operand rd reg [11:9]
+    operand rs1 reg [8:6]
+    operand rs2 reg [5:3]
+    describe "Bitwise and"
+    exec {
+      rd = rs1 & rs2;
+    }
+  }
+
+  instruction or "rd, rs1, rs2" {
+    size 16
+    match 0xf007 0x3
+    operand rd reg [11:9]
+    operand rs1 reg [8:6]
+    operand rs2 reg [5:3]
+    describe "Bitwise or"
+    exec {
+      rd = rs1 | rs2;
+    }
+  }
+
+  instruction xor "rd, rs1, rs2" {
+    size 16
+    match 0xf007 0x4
+    operand rd reg [11:9]
+    operand rs1 reg [8:6]
+    operand rs2 reg [5:3]
+    describe "Bitwise xor"
+    exec {
+      rd = rs1 ^ rs2;
+    }
+  }
+
+  instruction sll "rd, rs1, rs2" {
+    size 16
+    match 0xf007 0x5
+    operand rd reg [11:9]
+    operand rs1 reg [8:6]
+    operand rs2 reg [5:3]
+    describe "Shift left"
+    exec {
+      rd = rs1 << (rs2 & 15);
+    }
+  }
+
+  instruction srl "rd, rs1, rs2" {
+    size 16
+    match 0xf007 0x6
+    operand rd reg [11:9]
+    operand rs1 reg [8:6]
+    operand rs2 reg [5:3]
+    describe "Shift right (logical)"
+    exec {
+      rd = rs1 >> (rs2 & 15);
+    }
+  }
+
+  instruction slt "rd, rs1, rs2" {
+    size 16
+    match 0xf007 0x7
+    operand rd reg [11:9]
+    operand rs1 reg [8:6]
+    operand rs2 reg [5:3]
+    describe "Set if less than (signed)"
+    exec {
+      rd = rs1 < rs2 ? 1 : 0;
+    }
+  }
+
+  instruction addi "rd, rs1, imm" {
+    size 16
+    match 0xf000 0x1000
+    operand rd reg [11:9]
+    operand rs1 reg [8:6]
+    operand imm imm s[5:0]
+    describe "rd = rs1 + 6-bit signed immediate"
+    exec {
+      rd = rs1 + imm;
+    }
+  }
+
+  instruction li "rd, imm" {
+    size 16
+    match 0xf000 0x2000
+    operand rd reg [11:9]
+    operand imm imm s[8:0]
+    describe "Load a 9-bit signed immediate"
+    exec {
+      rd = imm;
+    }
+  }
+
+  instruction lw "rd, imm(rs1)" {
+    size 16
+    match 0xf000 0x3000
+    operand rd reg [11:9]
+    operand rs1 reg [8:6]
+    operand imm imm s[5:0]
+    cycles 2
+    describe "Load a 16-bit word"
+    exec {
+      rd = mem16[rs1 + imm];
+    }
+  }
+
+  instruction sw "rs2, imm(rs1)" {
+    size 16
+    match 0xf000 0x4000
+    operand rs2 reg [11:9]
+    operand rs1 reg [8:6]
+    operand imm imm s[5:0]
+    cycles 2
+    describe "Store a 16-bit word"
+    exec {
+      mem16[rs1 + imm] = rs2;
+    }
+  }
+
+  instruction beq "rs1, rs2, target" {
+    size 16
+    match 0xf000 0x5000
+    operand rs1 reg [11:9]
+    operand rs2 reg [8:6]
+    operand target pcrel s[5:0]<<1
+    describe "Branch if equal"
+    exec {
+      if (rs1 == rs2) {
+        pc = pc + target;
+      }
+    }
+  }
+
+  instruction bne "rs1, rs2, target" {
+    size 16
+    match 0xf000 0x6000
+    operand rs1 reg [11:9]
+    operand rs2 reg [8:6]
+    operand target pcrel s[5:0]<<1
+    describe "Branch if not equal"
+    exec {
+      if (rs1 != rs2) {
+        pc = pc + target;
+      }
+    }
+  }
+
+  instruction blt "rs1, rs2, target" {
+    size 16
+    match 0xf000 0x7000
+    operand rs1 reg [11:9]
+    operand rs2 reg [8:6]
+    operand target pcrel s[5:0]<<1
+    describe "Branch if less than (signed)"
+    exec {
+      if (rs1 < rs2) {
+        pc = pc + target;
+      }
+    }
+  }
+
+  instruction jmp "target" {
+    size 16
+    match 0xf000 0x8000
+    operand target pcrel s[11:0]<<1
+    describe "Jump"
+    exec {
+      pc = pc + target;
+    }
+  }
+
+  instruction jal "rd, target" {
+    size 16
+    match 0xf000 0x9000
+    operand rd reg [11:9]
+    operand target pcrel s[8:0]<<1
+    describe "Jump and link"
+    exec {
+      rd = next;
+      pc = pc + target;
+    }
+  }
+
+  instruction lui "rd, imm" {
+    size 16
+    match 0xf000 0xa000
+    operand rd reg [11:9]
+    operand imm imm [8:0]
+    describe "Load upper immediate (bits 14:6)"
+    exec {
+      rd = imm << 6;
+    }
+  }
+
+  instruction jr "rs1" {
+    size 16
+    match 0xfe3f 0xb000
+    operand rs1 reg [8:6]
+    describe "Jump to register"
+    exec {
+      pc = rs1;
+    }
+  }
+
+  instruction out "rs1" {
+    size 16
+    match 0xfe3f 0xc000
+    operand rs1 reg [8:6]
+    describe "Print rs1 as a signed number"
+    exec {
+      out("int", rs1);
+    }
+  }
+
+  instruction outc "rs1" {
+    size 16
+    match 0xfe3f 0xd000
+    operand rs1 reg [8:6]
+    describe "Print rs1 as a character"
+    exec {
+      out("char", rs1);
+    }
+  }
+
+  instruction halt "" {
+    size 16
+    match 0xffff 0xf000
+    describe "Stop the processor"
+    exec {
+      halt();
+    }
+  }
+
+  pseudo "nop" {
+    expand {
+      add zero, zero, zero
+    }
+  }
+
+  pseudo "mv rd, rs" {
+    expand {
+      add rd, rs, zero
+    }
+  }
+
+  pseudo "li rd, imm" {
+    when "imm >= -256 && imm <= 255" {
+      li rd, imm
+    }
+    otherwise {
+      lui rd, ((imm) + 32) >> 6
+      addi rd, rd, (imm) - ((((imm) + 32) >> 6) << 6)
+    }
+  }
+
+  pseudo "la rd, sym" {
+    expand {
+      lui rd, ((sym) + 32) >> 6
+      addi rd, rd, (sym) - ((((sym) + 32) >> 6) << 6)
+    }
+  }
+
+  pseudo "j target" {
+    expand {
+      jmp target
+    }
+  }
+
+  pseudo "call target" {
+    expand {
+      jal ra, target
+    }
+  }
+
+  pseudo "ret" {
+    expand {
+      jr ra
+    }
+  }
+
+  pseudo "beqz rs, target" {
+    expand {
+      beq rs, zero, target
+    }
+  }
+
+  pseudo "bnez rs, target" {
+    expand {
+      bne rs, zero, target
+    }
+  }
+
+  sample """
+    # Sum 1..10, keep the result in memory and print it.
+    .data
+    .align 1
+    result: .word 0
+
+    .text
+    main:
+        li   r1, 0          # sum
+        li   r2, 1          # i
+        li   r3, 11         # stop when i reaches 11
+    loop:
+        add  r1, r1, r2     # sum += i
+        addi r2, r2, 1      # i++
+        bne  r2, r3, loop
+
+        la   r5, result     # address of the variable
+        sw   r1, 0(r5)      # store the sum
+        lw   r4, 0(r5)      # read it back
+        out  r4             # print it
+        halt
+  """
+}

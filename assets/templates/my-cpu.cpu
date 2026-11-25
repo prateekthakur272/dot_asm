@@ -1,0 +1,85 @@
+# A blank processor: the smallest working design, to build your own on.
+# Add registers, flags, memory regions and instructions below (or in the processor builder).
+processor my-cpu "Blank processor (design your own)" {
+  arch custom
+  vendor "you"
+  year 2026
+  era modern
+  tags Custom Educational 16-bit
+  describe "The smallest working processor: 4 registers and five instructions. Start here to design your own architecture from scratch."
+
+  word 16 little
+  fetch 16
+  comments "#" ";" "//"
+
+  registers r count 4 width 16 {
+    zero 0
+  }
+  flags Z
+  reset 0x0
+
+  memory {
+    code at 0x0000 size 0x1000 perms rx role text
+    ram  at 0x4000 size 0x1000 perms rw role data
+  }
+
+  instruction nop "" {
+    size 16
+    match 0xFFFF 0x0000
+    describe "No operation"
+    exec {
+    }
+  }
+
+  instruction ldi "rd, imm" {
+    size 16
+    match 0xFC00 0x1000
+    operand rd reg [9:8]
+    operand imm imm s[7:0]
+    describe "Load an 8-bit constant"
+    exec {
+      rd = imm;
+      Z = rd == 0;
+    }
+  }
+
+  instruction add "rd, rs" {
+    size 16
+    match 0xFC3F 0x2000
+    operand rd reg [9:8]
+    operand rs reg [7:6]
+    describe "rd = rd + rs"
+    exec {
+      rd = rd + rs;
+      Z = rd == 0;
+    }
+  }
+
+  instruction out "rd" {
+    size 16
+    match 0xFCFF 0x3000
+    operand rd reg [9:8]
+    describe "Print a register as a number"
+    exec {
+      out("int", rd);
+    }
+  }
+
+  instruction halt "" {
+    size 16
+    match 0xFFFF 0xFFFF
+    describe "Stop the processor"
+    exec {
+      halt();
+    }
+  }
+
+  sample """
+    # Add two numbers and print the result.
+    ldi r1, 40
+    ldi r2, 2
+    add r1, r2
+    out r1
+    halt
+  """
+}

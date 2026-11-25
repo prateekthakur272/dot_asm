@@ -1,0 +1,1432 @@
+# dot ASM processor definition. Edit here or in the processor builder.
+processor x86_64 "x86-64 (AMD64 subset)" {
+  arch x86
+  vendor "AMD / Intel"
+  year 2003
+  era modern
+  tags CISC x86 x64 64-bit
+  describe "The 64-bit extension of x86 used by modern PCs and servers: 64-bit registers (rax..rdi), the REX.W prefix, 64-bit addresses, call/ret on a 64-bit stack and the syscall instruction. Subset: rax..rdi only (no r8-r15), register/immediate/[base+disp8] and [addr] operands, 32-bit immediates sign-extended."
+
+  word 64 little
+  fetch 8
+  wordbytes 2
+  comments ";" "//"
+  rewrite "\\[(rax|rcx|rdx|rbx|rsp|rbp|rsi|rdi)\\]" "[$1+0]"
+  rewrite "\\[(rax|rcx|rdx|rbx|rsp|rbp|rsi|rdi)-" "[$1+-"
+
+  registers r count 8 width 64 {
+    alias rax=0 rcx=1 rdx=2 rbx=3 rsp=4 rbp=5 rsi=6 rdi=7
+  }
+  flags CF ZF SF OF
+  init rsp=0x7ffeff00
+  reset 0x400000
+  pipeline Fetch Decode Execute Memory Write-back
+
+  memory {
+    text  at 0x400000 size 0x10000 perms rx role text
+    data  at 0x600000 size 0x10000 perms rw role data
+    stack at 0x7ffe0000 size 0x10000 perms rw role stack
+  }
+
+  instruction add "rm, reg" {
+    size 24
+    match 0xc0ffff 0xc00148
+    operand rm reg [18:16]
+    operand reg reg [21:19]
+    describe "Add register to register"
+    exec {
+      res = rm + reg;
+      CF = ltu(res, rm);
+      OF = bit((rm ^ res) & (reg ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction add "rm, imm" {
+    size 32
+    match 0xf8ffff 0xc08348
+    operand rm reg [18:16]
+    operand imm imm s[31:24]
+    describe "add with a sign-extended 8-bit immediate (83 /0)"
+    exec {
+      res = rm + imm;
+      CF = ltu(res, rm);
+      OF = bit((rm ^ res) & (imm ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction add "rm, imm" {
+    size 56
+    match 0xf8ffff 0xc08148
+    operand rm reg [18:16]
+    operand imm imm s[55:24]
+    describe "add with a sign-extended 32-bit immediate (81 /0)"
+    exec {
+      res = rm + imm;
+      CF = ltu(res, rm);
+      OF = bit((rm ^ res) & (imm ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction add "reg, [rsp+disp]" {
+    size 40
+    match 0xffc7ffff 0x24440348
+    operand reg reg [21:19]
+    operand disp imm s[39:32]
+    cycles 2
+    describe "add register with memory (stack pointer base)"
+    exec {
+      m = mem64[rsp + disp];
+      res = reg + m;
+      CF = ltu(res, reg);
+      OF = bit((reg ^ res) & (m ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+      reg = res;
+    }
+  }
+
+  instruction add "reg, [base+disp]" {
+    size 32
+    match 0xc0ffff 0x400348
+    operand reg reg [21:19]
+    operand base reg [18:16]
+    operand disp imm s[31:24]
+    cycles 2
+    describe "add register with memory"
+    exec {
+      m = mem64[base + disp];
+      res = reg + m;
+      CF = ltu(res, reg);
+      OF = bit((reg ^ res) & (m ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+      reg = res;
+    }
+  }
+
+  instruction and "rm, reg" {
+    size 24
+    match 0xc0ffff 0xc02148
+    operand rm reg [18:16]
+    operand reg reg [21:19]
+    describe "Bitwise and register to register"
+    exec {
+      res = rm & reg;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction and "rm, imm" {
+    size 32
+    match 0xf8ffff 0xe08348
+    operand rm reg [18:16]
+    operand imm imm s[31:24]
+    describe "and with a sign-extended 8-bit immediate (83 /4)"
+    exec {
+      res = rm & imm;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction and "rm, imm" {
+    size 56
+    match 0xf8ffff 0xe08148
+    operand rm reg [18:16]
+    operand imm imm s[55:24]
+    describe "and with a sign-extended 32-bit immediate (81 /4)"
+    exec {
+      res = rm & imm;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction and "reg, [rsp+disp]" {
+    size 40
+    match 0xffc7ffff 0x24442348
+    operand reg reg [21:19]
+    operand disp imm s[39:32]
+    cycles 2
+    describe "and register with memory (stack pointer base)"
+    exec {
+      m = mem64[rsp + disp];
+      res = reg & m;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      reg = res;
+    }
+  }
+
+  instruction and "reg, [base+disp]" {
+    size 32
+    match 0xc0ffff 0x402348
+    operand reg reg [21:19]
+    operand base reg [18:16]
+    operand disp imm s[31:24]
+    cycles 2
+    describe "and register with memory"
+    exec {
+      m = mem64[base + disp];
+      res = reg & m;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      reg = res;
+    }
+  }
+
+  instruction call "target" {
+    size 40
+    match 0xff 0xe8
+    operand target pcrel s[39:8]
+    cycles 3
+    base 5
+    describe "Call a subroutine (pushes the return address)"
+    exec {
+      rsp = rsp - 8;
+      mem64[rsp] = next;
+      pc = pc + 5 + target;
+    }
+  }
+
+  instruction call "rm" {
+    size 16
+    match 0xf8ff 0xd0ff
+    operand rm reg [10:8]
+    cycles 3
+    describe "Call the address in a register"
+    exec {
+      t = rm;
+      rsp = rsp - 8;
+      mem64[rsp] = next;
+      pc = t;
+    }
+  }
+
+  instruction cmp "rm, reg" {
+    size 24
+    match 0xc0ffff 0xc03948
+    operand rm reg [18:16]
+    operand reg reg [21:19]
+    describe "Compare (subtract, flags only) register to register"
+    exec {
+      res = rm - reg;
+      CF = ltu(rm, reg);
+      OF = bit((rm ^ reg) & (rm ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+    }
+  }
+
+  instruction cmp "rm, imm" {
+    size 32
+    match 0xf8ffff 0xf88348
+    operand rm reg [18:16]
+    operand imm imm s[31:24]
+    describe "cmp with a sign-extended 8-bit immediate (83 /7)"
+    exec {
+      res = rm - imm;
+      CF = ltu(rm, imm);
+      OF = bit((rm ^ imm) & (rm ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+    }
+  }
+
+  instruction cmp "rm, imm" {
+    size 56
+    match 0xf8ffff 0xf88148
+    operand rm reg [18:16]
+    operand imm imm s[55:24]
+    describe "cmp with a sign-extended 32-bit immediate (81 /7)"
+    exec {
+      res = rm - imm;
+      CF = ltu(rm, imm);
+      OF = bit((rm ^ imm) & (rm ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+    }
+  }
+
+  instruction cmp "reg, [rsp+disp]" {
+    size 40
+    match 0xffc7ffff 0x24443b48
+    operand reg reg [21:19]
+    operand disp imm s[39:32]
+    cycles 2
+    describe "cmp register with memory (stack pointer base)"
+    exec {
+      m = mem64[rsp + disp];
+      res = reg - m;
+      CF = ltu(reg, m);
+      OF = bit((reg ^ m) & (reg ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+    }
+  }
+
+  instruction cmp "reg, [base+disp]" {
+    size 32
+    match 0xc0ffff 0x403b48
+    operand reg reg [21:19]
+    operand base reg [18:16]
+    operand disp imm s[31:24]
+    cycles 2
+    describe "cmp register with memory"
+    exec {
+      m = mem64[base + disp];
+      res = reg - m;
+      CF = ltu(reg, m);
+      OF = bit((reg ^ m) & (reg ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+    }
+  }
+
+  instruction dec "rm" {
+    size 24
+    match 0xf8ffff 0xc8ff48
+    operand rm reg [18:16]
+    describe "Decrement (CF unchanged)"
+    exec {
+      res = rm - 1;
+      OF = res == (1 << 63) - 1;
+      rm = res;
+      ZF = res == 0;
+      SF = bit(res, 63);
+    }
+  }
+
+  instruction hlt "" {
+    size 8
+    match 0xff 0xf4
+    describe "Halt the processor"
+    exec {
+      halt();
+    }
+  }
+
+  instruction imul "reg, rm" {
+    size 32
+    match 0xc0ffffff 0xc0af0f48
+    operand reg reg [29:27]
+    operand rm reg [26:24]
+    cycles 3
+    describe "Signed multiply (low half of the product); CF/OF set on overflow"
+    exec {
+      res = reg * rm;
+      CF = mulh(reg, rm) != sra(res, 63);
+      OF = CF;
+      reg = res;
+    }
+  }
+
+  instruction inc "rm" {
+    size 24
+    match 0xf8ffff 0xc0ff48
+    operand rm reg [18:16]
+    describe "Increment (CF unchanged)"
+    exec {
+      res = rm + 1;
+      OF = res == (1 << 63);
+      rm = res;
+      ZF = res == 0;
+      SF = bit(res, 63);
+    }
+  }
+
+  instruction ja "target" {
+    size 16
+    match 0xff 0x77
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if above (unsigned >) (8-bit displacement)"
+    exec {
+      if (!CF && !ZF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction ja "target" {
+    size 48
+    match 0xffff 0x870f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if above (unsigned >) (32-bit displacement)"
+    exec {
+      if (!CF && !ZF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction jae "target" {
+    size 16
+    match 0xff 0x73
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if above or equal (unsigned >=) (8-bit displacement)"
+    exec {
+      if (!CF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction jae "target" {
+    size 48
+    match 0xffff 0x830f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if above or equal (unsigned >=) (32-bit displacement)"
+    exec {
+      if (!CF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction jb "target" {
+    size 16
+    match 0xff 0x72
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if below (unsigned <) (8-bit displacement)"
+    exec {
+      if (CF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction jb "target" {
+    size 48
+    match 0xffff 0x820f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if below (unsigned <) (32-bit displacement)"
+    exec {
+      if (CF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction jbe "target" {
+    size 16
+    match 0xff 0x76
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if below or equal (unsigned <=) (8-bit displacement)"
+    exec {
+      if (CF || ZF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction jbe "target" {
+    size 48
+    match 0xffff 0x860f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if below or equal (unsigned <=) (32-bit displacement)"
+    exec {
+      if (CF || ZF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction je "target" {
+    size 16
+    match 0xff 0x74
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if equal (8-bit displacement)"
+    exec {
+      if (ZF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction je "target" {
+    size 48
+    match 0xffff 0x840f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if equal (32-bit displacement)"
+    exec {
+      if (ZF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction jg "target" {
+    size 16
+    match 0xff 0x7f
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if greater (signed >) (8-bit displacement)"
+    exec {
+      if (!ZF && SF == OF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction jg "target" {
+    size 48
+    match 0xffff 0x8f0f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if greater (signed >) (32-bit displacement)"
+    exec {
+      if (!ZF && SF == OF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction jge "target" {
+    size 16
+    match 0xff 0x7d
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if greater or equal (signed >=) (8-bit displacement)"
+    exec {
+      if (SF == OF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction jge "target" {
+    size 48
+    match 0xffff 0x8d0f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if greater or equal (signed >=) (32-bit displacement)"
+    exec {
+      if (SF == OF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction jl "target" {
+    size 16
+    match 0xff 0x7c
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if less (signed <) (8-bit displacement)"
+    exec {
+      if (SF != OF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction jl "target" {
+    size 48
+    match 0xffff 0x8c0f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if less (signed <) (32-bit displacement)"
+    exec {
+      if (SF != OF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction jle "target" {
+    size 16
+    match 0xff 0x7e
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if less or equal (signed <=) (8-bit displacement)"
+    exec {
+      if (ZF || SF != OF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction jle "target" {
+    size 48
+    match 0xffff 0x8e0f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if less or equal (signed <=) (32-bit displacement)"
+    exec {
+      if (ZF || SF != OF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction jmp "target" {
+    size 16
+    match 0xff 0xeb
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump (8-bit displacement)"
+    exec {
+      pc = pc + 2 + target;
+    }
+  }
+
+  instruction jmp "target" {
+    size 40
+    match 0xff 0xe9
+    operand target pcrel s[39:8]
+    base 5
+    describe "Jump (32-bit displacement)"
+    exec {
+      pc = pc + 5 + target;
+    }
+  }
+
+  instruction jmp "rm" {
+    size 16
+    match 0xf8ff 0xe0ff
+    operand rm reg [10:8]
+    describe "Jump to the address in a register"
+    exec {
+      pc = rm;
+    }
+  }
+
+  instruction jne "target" {
+    size 16
+    match 0xff 0x75
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if not equal (8-bit displacement)"
+    exec {
+      if (!ZF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction jne "target" {
+    size 48
+    match 0xffff 0x850f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if not equal (32-bit displacement)"
+    exec {
+      if (!ZF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction jno "target" {
+    size 16
+    match 0xff 0x71
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if not overflow (8-bit displacement)"
+    exec {
+      if (!OF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction jno "target" {
+    size 48
+    match 0xffff 0x810f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if not overflow (32-bit displacement)"
+    exec {
+      if (!OF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction jns "target" {
+    size 16
+    match 0xff 0x79
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if not sign (8-bit displacement)"
+    exec {
+      if (!SF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction jns "target" {
+    size 48
+    match 0xffff 0x890f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if not sign (32-bit displacement)"
+    exec {
+      if (!SF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction jo "target" {
+    size 16
+    match 0xff 0x70
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if overflow (8-bit displacement)"
+    exec {
+      if (OF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction jo "target" {
+    size 48
+    match 0xffff 0x800f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if overflow (32-bit displacement)"
+    exec {
+      if (OF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction js "target" {
+    size 16
+    match 0xff 0x78
+    operand target pcrel s[15:8]
+    base 2
+    describe "Jump if sign (negative) (8-bit displacement)"
+    exec {
+      if (SF) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction js "target" {
+    size 48
+    match 0xffff 0x880f
+    operand target pcrel s[47:16]
+    base 6
+    describe "Jump if sign (negative) (32-bit displacement)"
+    exec {
+      if (SF) {
+        pc = pc + 6 + target;
+      }
+    }
+  }
+
+  instruction lea "reg, [rsp+disp]" {
+    size 40
+    match 0xffc7ffff 0x24448d48
+    operand reg reg [21:19]
+    operand disp imm s[39:32]
+    describe "Load effective address"
+    exec {
+      reg = rsp + disp;
+    }
+  }
+
+  instruction lea "reg, [base+disp]" {
+    size 32
+    match 0xc0ffff 0x408d48
+    operand reg reg [21:19]
+    operand base reg [18:16]
+    operand disp imm s[31:24]
+    describe "Load effective address (no memory access)"
+    exec {
+      reg = base + disp;
+    }
+  }
+
+  instruction mov "rm, reg" {
+    size 24
+    match 0xc0ffff 0xc08948
+    operand rm reg [18:16]
+    operand reg reg [21:19]
+    describe "Copy a register (mod=11)"
+    exec {
+      rm = reg;
+    }
+  }
+
+  instruction mov "reg, imm" {
+    size 56
+    match 0xf8ffff 0xc0c748
+    operand reg reg [18:16]
+    operand imm imm s[55:24]
+    describe "Load a sign-extended 32-bit constant (C7 /0)"
+    exec {
+      reg = imm;
+    }
+  }
+
+  instruction mov "[rsp+disp], reg" {
+    size 40
+    match 0xffc7ffff 0x24448948
+    operand reg reg [21:19]
+    operand disp imm s[39:32]
+    cycles 2
+    describe "Store a register to memory (the stack pointer as base needs a SIB byte)"
+    exec {
+      mem64[rsp + disp] = reg;
+    }
+  }
+
+  instruction mov "[base+disp], reg" {
+    size 32
+    match 0xc0ffff 0x408948
+    operand reg reg [21:19]
+    operand base reg [18:16]
+    operand disp imm s[31:24]
+    cycles 2
+    describe "Store a register to memory"
+    exec {
+      mem64[base + disp] = reg;
+    }
+  }
+
+  instruction mov "reg, [rsp+disp]" {
+    size 40
+    match 0xffc7ffff 0x24448b48
+    operand reg reg [21:19]
+    operand disp imm s[39:32]
+    cycles 2
+    describe "Load a register from memory (the stack pointer as base needs a SIB byte)"
+    exec {
+      reg = mem64[rsp + disp];
+    }
+  }
+
+  instruction mov "reg, [base+disp]" {
+    size 32
+    match 0xc0ffff 0x408b48
+    operand reg reg [21:19]
+    operand base reg [18:16]
+    operand disp imm s[31:24]
+    cycles 2
+    describe "Load a register from memory"
+    exec {
+      reg = mem64[base + disp];
+    }
+  }
+
+  instruction mov "reg, [addr]" {
+    size 64
+    match 0xffc7ffff 0x25048b48
+    operand reg reg [21:19]
+    operand addr imm [63:32]
+    cycles 2
+    describe "Load from an absolute 32-bit address (SIB form)"
+    exec {
+      reg = mem64[addr];
+    }
+  }
+
+  instruction mov "[addr], reg" {
+    size 64
+    match 0xffc7ffff 0x25048948
+    operand reg reg [21:19]
+    operand addr imm [63:32]
+    cycles 2
+    describe "Store to an absolute 32-bit address (SIB form)"
+    exec {
+      mem64[addr] = reg;
+    }
+  }
+
+  instruction neg "rm" {
+    size 24
+    match 0xf8ffff 0xd8f748
+    operand rm reg [18:16]
+    describe "Two's complement negate"
+    exec {
+      res = 0 - rm;
+      CF = rm != 0;
+      OF = rm == (1 << 63);
+      rm = res;
+      ZF = res == 0;
+      SF = bit(res, 63);
+    }
+  }
+
+  instruction nop "" {
+    size 8
+    match 0xff 0x90
+    describe "No operation"
+    exec {
+    }
+  }
+
+  instruction not "rm" {
+    size 24
+    match 0xf8ffff 0xd0f748
+    operand rm reg [18:16]
+    describe "Bitwise not (flags unchanged)"
+    exec {
+      rm = ~rm;
+    }
+  }
+
+  instruction or "rm, reg" {
+    size 24
+    match 0xc0ffff 0xc00948
+    operand rm reg [18:16]
+    operand reg reg [21:19]
+    describe "Bitwise or register to register"
+    exec {
+      res = rm | reg;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction or "rm, imm" {
+    size 32
+    match 0xf8ffff 0xc88348
+    operand rm reg [18:16]
+    operand imm imm s[31:24]
+    describe "or with a sign-extended 8-bit immediate (83 /1)"
+    exec {
+      res = rm | imm;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction or "rm, imm" {
+    size 56
+    match 0xf8ffff 0xc88148
+    operand rm reg [18:16]
+    operand imm imm s[55:24]
+    describe "or with a sign-extended 32-bit immediate (81 /1)"
+    exec {
+      res = rm | imm;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction or "reg, [rsp+disp]" {
+    size 40
+    match 0xffc7ffff 0x24440b48
+    operand reg reg [21:19]
+    operand disp imm s[39:32]
+    cycles 2
+    describe "or register with memory (stack pointer base)"
+    exec {
+      m = mem64[rsp + disp];
+      res = reg | m;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      reg = res;
+    }
+  }
+
+  instruction or "reg, [base+disp]" {
+    size 32
+    match 0xc0ffff 0x400b48
+    operand reg reg [21:19]
+    operand base reg [18:16]
+    operand disp imm s[31:24]
+    cycles 2
+    describe "or register with memory"
+    exec {
+      m = mem64[base + disp];
+      res = reg | m;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      reg = res;
+    }
+  }
+
+  instruction pop "reg" {
+    size 8
+    match 0xf8 0x58
+    operand reg reg [2:0]
+    cycles 2
+    describe "Pop into a register"
+    exec {
+      t = mem64[rsp];
+      rsp = rsp + 8;
+      reg = t;
+    }
+  }
+
+  instruction push "reg" {
+    size 8
+    match 0xf8 0x50
+    operand reg reg [2:0]
+    cycles 2
+    describe "Push a register"
+    exec {
+      t = reg;
+      rsp = rsp - 8;
+      mem64[rsp] = t;
+    }
+  }
+
+  instruction push "imm" {
+    size 16
+    match 0xff 0x6a
+    operand imm imm s[15:8]
+    cycles 2
+    describe "Push a sign-extended 8-bit immediate"
+    exec {
+      rsp = rsp - 8;
+      mem64[rsp] = imm;
+    }
+  }
+
+  instruction push "imm" {
+    size 40
+    match 0xff 0x68
+    operand imm imm s[39:8]
+    cycles 2
+    describe "Push a sign-extended 32-bit immediate"
+    exec {
+      rsp = rsp - 8;
+      mem64[rsp] = imm;
+    }
+  }
+
+  instruction ret "" {
+    size 8
+    match 0xff 0xc3
+    cycles 3
+    describe "Return (pops the return address)"
+    exec {
+      t = mem64[rsp];
+      rsp = rsp + 8;
+      pc = t;
+    }
+  }
+
+  instruction sar "rm, imm" {
+    size 32
+    match 0xf8ffff 0xf8c148
+    operand rm reg [18:16]
+    operand imm imm [31:24]
+    describe "Shift right (arithmetic) by an immediate"
+    exec {
+      n = imm & 63;
+      if (n != 0) {
+        CF = bit(rm, n - 1);
+        res = sra(rm, n);
+        rm = res;
+        ZF = res == 0;
+        SF = bit(res, 63);
+      }
+    }
+  }
+
+  instruction shl "rm, imm" {
+    size 32
+    match 0xf8ffff 0xe0c148
+    operand rm reg [18:16]
+    operand imm imm [31:24]
+    describe "Shift left by an immediate"
+    exec {
+      n = imm & 63;
+      if (n != 0) {
+        CF = bit(rm, 64 - n);
+        res = rm << n;
+        rm = res;
+        ZF = res == 0;
+        SF = bit(res, 63);
+      }
+    }
+  }
+
+  instruction shr "rm, imm" {
+    size 32
+    match 0xf8ffff 0xe8c148
+    operand rm reg [18:16]
+    operand imm imm [31:24]
+    describe "Shift right (logical) by an immediate"
+    exec {
+      n = imm & 63;
+      if (n != 0) {
+        CF = bit(rm, n - 1);
+        res = rm >> n;
+        rm = res;
+        ZF = res == 0;
+        SF = bit(res, 63);
+      }
+    }
+  }
+
+  instruction sub "rm, reg" {
+    size 24
+    match 0xc0ffff 0xc02948
+    operand rm reg [18:16]
+    operand reg reg [21:19]
+    describe "Subtract register to register"
+    exec {
+      res = rm - reg;
+      CF = ltu(rm, reg);
+      OF = bit((rm ^ reg) & (rm ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction sub "rm, imm" {
+    size 32
+    match 0xf8ffff 0xe88348
+    operand rm reg [18:16]
+    operand imm imm s[31:24]
+    describe "sub with a sign-extended 8-bit immediate (83 /5)"
+    exec {
+      res = rm - imm;
+      CF = ltu(rm, imm);
+      OF = bit((rm ^ imm) & (rm ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction sub "rm, imm" {
+    size 56
+    match 0xf8ffff 0xe88148
+    operand rm reg [18:16]
+    operand imm imm s[55:24]
+    describe "sub with a sign-extended 32-bit immediate (81 /5)"
+    exec {
+      res = rm - imm;
+      CF = ltu(rm, imm);
+      OF = bit((rm ^ imm) & (rm ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction sub "reg, [rsp+disp]" {
+    size 40
+    match 0xffc7ffff 0x24442b48
+    operand reg reg [21:19]
+    operand disp imm s[39:32]
+    cycles 2
+    describe "sub register with memory (stack pointer base)"
+    exec {
+      m = mem64[rsp + disp];
+      res = reg - m;
+      CF = ltu(reg, m);
+      OF = bit((reg ^ m) & (reg ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+      reg = res;
+    }
+  }
+
+  instruction sub "reg, [base+disp]" {
+    size 32
+    match 0xc0ffff 0x402b48
+    operand reg reg [21:19]
+    operand base reg [18:16]
+    operand disp imm s[31:24]
+    cycles 2
+    describe "sub register with memory"
+    exec {
+      m = mem64[base + disp];
+      res = reg - m;
+      CF = ltu(reg, m);
+      OF = bit((reg ^ m) & (reg ^ res), 63);
+      ZF = res == 0;
+      SF = bit(res, 63);
+      reg = res;
+    }
+  }
+
+  instruction syscall "" {
+    size 16
+    match 0xffff 0x50f
+    describe "System call. Simulator services: rax=1 exit, 2 print rdi as int, 3 print rdi as char, 4 print string at rdi"
+    exec {
+      if (rax == 1) {
+        halt();
+      } else if (rax == 2) {
+        out("int", rdi);
+      } else if (rax == 3) {
+        out("char", rdi);
+      } else if (rax == 4) {
+        out("str", rdi);
+      } else {
+        trap("Unsupported syscall (rax: 1 exit, 2 print int rdi, 3 print char rdi, 4 print string at rdi)");
+      }
+    }
+  }
+
+  instruction test "rm, reg" {
+    size 24
+    match 0xc0ffff 0xc08548
+    operand rm reg [18:16]
+    operand reg reg [21:19]
+    describe "Bitwise and, flags only"
+    exec {
+      res = rm & reg;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+    }
+  }
+
+  instruction xor "rm, reg" {
+    size 24
+    match 0xc0ffff 0xc03148
+    operand rm reg [18:16]
+    operand reg reg [21:19]
+    describe "Bitwise xor register to register"
+    exec {
+      res = rm ^ reg;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction xor "rm, imm" {
+    size 32
+    match 0xf8ffff 0xf08348
+    operand rm reg [18:16]
+    operand imm imm s[31:24]
+    describe "xor with a sign-extended 8-bit immediate (83 /6)"
+    exec {
+      res = rm ^ imm;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction xor "rm, imm" {
+    size 56
+    match 0xf8ffff 0xf08148
+    operand rm reg [18:16]
+    operand imm imm s[55:24]
+    describe "xor with a sign-extended 32-bit immediate (81 /6)"
+    exec {
+      res = rm ^ imm;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      rm = res;
+    }
+  }
+
+  instruction xor "reg, [rsp+disp]" {
+    size 40
+    match 0xffc7ffff 0x24443348
+    operand reg reg [21:19]
+    operand disp imm s[39:32]
+    cycles 2
+    describe "xor register with memory (stack pointer base)"
+    exec {
+      m = mem64[rsp + disp];
+      res = reg ^ m;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      reg = res;
+    }
+  }
+
+  instruction xor "reg, [base+disp]" {
+    size 32
+    match 0xc0ffff 0x403348
+    operand reg reg [21:19]
+    operand base reg [18:16]
+    operand disp imm s[31:24]
+    cycles 2
+    describe "xor register with memory"
+    exec {
+      m = mem64[base + disp];
+      res = reg ^ m;
+      CF = 0;
+      OF = 0;
+      ZF = res == 0;
+      SF = bit(res, 63);
+      reg = res;
+    }
+  }
+
+  pseudo "jz target" {
+    expand {
+      je target
+    }
+  }
+
+  pseudo "jnz target" {
+    expand {
+      jne target
+    }
+  }
+
+  pseudo "jc target" {
+    expand {
+      jb target
+    }
+  }
+
+  pseudo "jnc target" {
+    expand {
+      jae target
+    }
+  }
+
+  pseudo "jnae target" {
+    expand {
+      jb target
+    }
+  }
+
+  pseudo "jnb target" {
+    expand {
+      jae target
+    }
+  }
+
+  pseudo "jna target" {
+    expand {
+      jbe target
+    }
+  }
+
+  pseudo "jnbe target" {
+    expand {
+      ja target
+    }
+  }
+
+  pseudo "jnge target" {
+    expand {
+      jl target
+    }
+  }
+
+  pseudo "jnl target" {
+    expand {
+      jge target
+    }
+  }
+
+  pseudo "jng target" {
+    expand {
+      jle target
+    }
+  }
+
+  pseudo "jnle target" {
+    expand {
+      jg target
+    }
+  }
+
+  pseudo "mov reg, imm" {
+    expand {
+      mov reg, ((imm) >> 48) & 65535
+      shl reg, 16
+      or reg, ((imm) >> 32) & 65535
+      shl reg, 16
+      or reg, ((imm) >> 16) & 65535
+      shl reg, 16
+      or reg, (imm) & 65535
+    }
+  }
+
+  sample """
+    ; x86-64 (Intel syntax): sum 1..10, double it in a function, print it.
+    ; syscall services (simulator): rax=1 exit, 2 print rdi as a number, 4 print the string at rdi.
+            .data
+    msg:    .asciz "sum = "
+    total:  .quad 0
+
+            .text
+    main:
+            mov   rax, 0              ; sum (64-bit registers, REX.W prefix)
+            mov   rcx, 1              ; i
+    again:
+            add   rax, rcx
+            inc   rcx
+            cmp   rcx, 10
+            jle   again
+
+            mov   [total], rax        ; absolute address through a SIB byte
+            call  double
+            push  rax
+
+            mov   rdi, msg
+            mov   rax, 4
+            syscall                   ; print "sum = "
+            pop   rdi
+            mov   rax, 2
+            syscall                   ; print the number
+            mov   rax, 1
+            syscall                   ; exit
+
+    double:
+            add   rax, rax
+            ret
+  """
+}

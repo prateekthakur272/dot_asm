@@ -47,7 +47,7 @@ class Btn extends StatelessWidget {
           bg = danger
               ? (hovered ? p.err.withOpacity(0.85) : p.err)
               : (hovered ? p.accent.withOpacity(0.85) : p.accent);
-          fg = Colors.white;
+          fg = danger ? Colors.white : p.onAccent;
         } else if (outlined) {
           bg = hovered
               ? (danger ? p.err.withOpacity(0.12) : p.hover)
@@ -93,11 +93,13 @@ class Btn extends StatelessWidget {
                 Icon(icon, size: height <= 24 ? 13 : 14, color: fg),
                 const SizedBox(width: 6),
               ],
-              T(
-                label,
-                size: effectiveFontSize,
-                weight: FontWeight.w500,
-                color: fg,
+              Flexible(
+                child: T(
+                  label,
+                  size: effectiveFontSize,
+                  weight: FontWeight.w500,
+                  color: fg,
+                ),
               ),
             ],
           ),
@@ -145,7 +147,7 @@ class IconBtn extends StatelessWidget {
         final bg = active
             ? p.accent.withOpacity(0.12)
             : (hovered
-                  ? (p.dark ? const Color(0xFF353942) : const Color(0xFFD6D9DE))
+                  ? (p.dark ? const Color(0xFF2A2A2A) : const Color(0xFFD9D9D9))
                   : Colors.transparent);
 
         return Container(

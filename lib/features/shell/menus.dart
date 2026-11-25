@@ -108,6 +108,32 @@ List<PlatformMenuItem> buildMacMenus(AppState state, VoidCallback onQuit) {
         PlatformMenuItemGroup(
           members: [
             PlatformMenuItem(
+              label: 'New Project…',
+              shortcut: const SingleActivator(
+                LogicalKeyboardKey.keyN,
+                meta: true,
+              ),
+              onSelected: () => state.modal = const ModalNewProject(),
+            ),
+            PlatformMenuItem(
+              label: 'Open Project…',
+              shortcut: const SingleActivator(
+                LogicalKeyboardKey.keyO,
+                meta: true,
+              ),
+              onSelected: () => state.openProjectFromPicker(),
+            ),
+            PlatformMenuItem(
+              label: 'Close Project',
+              onSelected: state.activeProject == null
+                  ? null
+                  : state.closeProject,
+            ),
+          ],
+        ),
+        PlatformMenuItemGroup(
+          members: [
+            PlatformMenuItem(
               label: 'Show Data Folder',
               shortcut: const SingleActivator(
                 LogicalKeyboardKey.keyD,
@@ -232,6 +258,52 @@ List<PlatformMenuItem> buildMacMenus(AppState state, VoidCallback onQuit) {
       ],
     ),
     PlatformMenu(
+      label: 'Run',
+      menus: [
+        PlatformMenuItemGroup(
+          members: [
+            PlatformMenuItem(
+              label: 'Assemble',
+              shortcut: const SingleActivator(
+                LogicalKeyboardKey.keyB,
+                meta: true,
+                shift: true,
+              ),
+              onSelected: state.activeProject == null
+                  ? null
+                  : state.assembleNow,
+            ),
+            PlatformMenuItem(
+              label: 'Run / Pause',
+              shortcut: const SingleActivator(LogicalKeyboardKey.f5),
+              onSelected: !state.sim.canRun && !state.sim.running
+                  ? null
+                  : () => state.sim.running
+                        ? state.sim.pause()
+                        : unawaited(state.sim.run()),
+            ),
+            PlatformMenuItem(
+              label: 'Step',
+              shortcut: const SingleActivator(LogicalKeyboardKey.f10),
+              onSelected: state.sim.canStep ? state.sim.stepOnce : null,
+            ),
+            PlatformMenuItem(
+              label: 'Step Back',
+              shortcut: const SingleActivator(
+                LogicalKeyboardKey.f10,
+                shift: true,
+              ),
+              onSelected: state.sim.canUndo ? state.sim.stepBack : null,
+            ),
+            PlatformMenuItem(
+              label: 'Reset',
+              onSelected: state.activeProject == null ? null : state.sim.reset,
+            ),
+          ],
+        ),
+      ],
+    ),
+    PlatformMenu(
       label: 'Window',
       menus: [
         const PlatformMenuItemGroup(
@@ -311,6 +383,25 @@ Map<String, List<ContextMenuItem>> buildWindowsLinuxMenuItems({
   return {
     'File': [
       ContextMenuItem(
+        label: 'New Project…',
+        icon: AppIcons.add,
+        shortcut: 'Ctrl+N',
+        action: () => state.modal = const ModalNewProject(),
+      ),
+      ContextMenuItem(
+        label: 'Open Project…',
+        icon: AppIcons.folder,
+        shortcut: 'Ctrl+O',
+        action: () => state.openProjectFromPicker(),
+      ),
+      if (state.activeProject != null)
+        ContextMenuItem(
+          label: 'Close Project',
+          icon: AppIcons.close,
+          action: state.closeProject,
+        ),
+      const ContextMenuItem(label: ''),
+      ContextMenuItem(
         label: 'Settings…',
         icon: AppIcons.settings,
         shortcut: 'Ctrl+,',
@@ -349,6 +440,40 @@ Map<String, List<ContextMenuItem>> buildWindowsLinuxMenuItems({
         icon: Icons.brightness_medium_outlined,
         shortcut: 'Ctrl+T',
         action: state.toggleTheme,
+      ),
+    ],
+    'Run': [
+      ContextMenuItem(
+        label: 'Assemble',
+        icon: Icons.build_circle_outlined,
+        shortcut: 'Ctrl+Shift+B',
+        action: state.activeProject == null ? null : state.assembleNow,
+      ),
+      ContextMenuItem(
+        label: state.sim.running ? 'Pause' : 'Run',
+        icon: state.sim.running
+            ? Icons.pause_rounded
+            : Icons.play_arrow_rounded,
+        shortcut: 'F5',
+        action: () =>
+            state.sim.running ? state.sim.pause() : unawaited(state.sim.run()),
+      ),
+      ContextMenuItem(
+        label: 'Step',
+        icon: Icons.skip_next_rounded,
+        shortcut: 'F10',
+        action: state.sim.stepOnce,
+      ),
+      ContextMenuItem(
+        label: 'Step Back',
+        icon: Icons.undo_rounded,
+        shortcut: 'Shift+F10',
+        action: state.sim.stepBack,
+      ),
+      ContextMenuItem(
+        label: 'Reset',
+        icon: Icons.restart_alt_rounded,
+        action: state.sim.reset,
       ),
     ],
     'Window': [

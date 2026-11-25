@@ -13,11 +13,24 @@ See `AGENTS.md` for the layer rules. Startup order:
 5. After the first frame an update check runs against GitHub releases (`UpdateChecker`); a newer, not-dismissed
    release opens the *Update Available* dialog, and a badge stays in the status bar.
 
-## Data on disk (`~/.dotasm`)
+## Data on disk
+
+App data (`~/.dotasm`):
 
 | File | Contents |
 |---|---|
 | `settings.json` | `AppSettings`: theme mode, open at login |
-| `state.json` | `SavedState`: sidebar, window geometry |
-| `prefs.json` | Small flags, e.g. the dismissed update version |
+| `state.json` | `SavedState`: sidebar, window geometry, open view |
+| `prefs.json` | Small flags: dismissed update version, last project location |
+| `projects.json` | The folders of the known projects (the projects themselves are not stored here) |
 | `dotasm.log` | Rotating log, 1 MB with `.old` backup |
+
+A project is a folder the user chooses:
+
+| File | Contents |
+|---|---|
+| `project.dotasm` | Project configuration in the block language: name, processor, source file, speed, breakpoints, panel tab |
+| `main.s` | The assembly source |
+| `cpu/*.cpu` | The project's own processors in the block language |
+
+See [PROCESSORS.md](PROCESSORS.md) for the file formats.

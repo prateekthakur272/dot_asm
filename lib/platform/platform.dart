@@ -40,6 +40,26 @@ class Platform {
     return null;
   }
 
+  /// Opens a native dialog to pick a file with one of [extensions] (without the dot).
+  static Future<String?> pickFile(String title, List<String> extensions) async {
+    try {
+      await FilePicker.skipEntitlementsChecks();
+      final res = await FilePicker.pickFiles(
+        dialogTitle: title,
+        type: FileType.custom,
+        allowedExtensions: extensions,
+      );
+      if (res.isNotEmpty &&
+          res.first.path != null &&
+          res.first.path!.isNotEmpty) {
+        return res.first.path;
+      }
+    } catch (e, st) {
+      Log.warning('platform', 'FilePicker file dialog failed', e, st);
+    }
+    return null;
+  }
+
   /// Opens a native dialog to pick an application executable or bundle.
   static Future<String?> pickApplication(String title) async {
     if (isMac) {

@@ -4,6 +4,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dot_asm/app/app_state.dart';
+import 'package:dot_asm/app/processor_catalog.dart';
 import 'package:dot_asm/core/logging/log.dart';
 import 'package:dot_asm/core/model/models.dart';
 import 'package:dot_asm/core/storage/storage.dart';
@@ -43,6 +44,8 @@ bool _positionVisible(WindowGeometry? g) =>
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppMetadata.load();
+  await TemplateCatalog.load(rootBundle);
+  await PlannedCatalog.load(rootBundle);
   await Platform.init();
   await wm.windowManager.ensureInitialized();
 
@@ -234,6 +237,21 @@ class _DotAsmAppState extends State<DotAsmApp>
   bool _onKey(KeyEvent e) {
     if (e is! KeyDownEvent) return false;
 
+    // Debugger keys (only while a project is open): F5 run/pause, F10 step, Shift+F10 step back.
+    if (state.activeProject != null &&
+        state.modal == null &&
+        !state.paletteOpen) {
+      final shift = HardwareKeyboard.instance.isShiftPressed;
+      if (e.logicalKey == LogicalKeyboardKey.f5) {
+        state.sim.running ? state.sim.pause() : unawaited(state.sim.run());
+        return true;
+      }
+      if (e.logicalKey == LogicalKeyboardKey.f10) {
+        shift ? state.sim.stepBack() : state.sim.stepOnce();
+        return true;
+      }
+    }
+
     final isCmdOrCtrl = isMac
         ? HardwareKeyboard.instance.isMetaPressed
         : HardwareKeyboard.instance.isControlPressed;
@@ -243,8 +261,16 @@ class _DotAsmAppState extends State<DotAsmApp>
         state.paletteOpen = !state.paletteOpen;
         return true;
       }
+      if (e.logicalKey == LogicalKeyboardKey.keyN) {
+        state.modal = const ModalNewProject();
+        return true;
+      }
       if (e.logicalKey == LogicalKeyboardKey.keyB) {
-        state.toggleSidebar();
+        if (HardwareKeyboard.instance.isShiftPressed) {
+          if (state.activeProject != null) state.assembleNow();
+        } else {
+          state.toggleSidebar();
+        }
         return true;
       }
       if (e.logicalKey == LogicalKeyboardKey.keyT) {

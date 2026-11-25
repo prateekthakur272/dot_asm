@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:dot_asm/app/app_state.dart';
-import 'package:dot_asm/components/dot_pattern.dart';
 import 'package:dot_asm/components/drag_devices.dart';
 import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/features/dialogs/modals.dart';
+import 'package:dot_asm/features/processor_builder/builder_view.dart';
+import 'package:dot_asm/features/projects/gallery_view.dart';
+import 'package:dot_asm/features/projects/home_view.dart';
+import 'package:dot_asm/features/projects/sidebar.dart';
+import 'package:dot_asm/features/workspace/workspace_view.dart';
 import 'package:dot_asm/features/shell/palette.dart';
 import 'package:dot_asm/features/shell/status_bar.dart';
 import 'package:dot_asm/features/shell/top_bar.dart';
 import 'package:dot_asm/features/shell/window_chrome.dart';
-import 'package:dot_asm/theme/icons.dart';
 import 'package:dot_asm/theme/theme.dart';
 import 'package:dot_asm/utils/app_config.dart';
 
@@ -60,7 +63,9 @@ class AppShell extends StatelessWidget {
                             child: IgnorePointer(
                               child: Center(
                                 child: T(
-                                  AppConfig.NAME,
+                                  state.activeProject == null
+                                      ? AppConfig.NAME
+                                      : '${state.activeProject!.name} — ${AppConfig.NAME}',
                                   size: 11.5,
                                   color: p.muted,
                                   weight: FontWeight.w500,
@@ -83,17 +88,7 @@ class AppShell extends StatelessWidget {
                       if (ui.sidebarVisible) ...[
                         SizedBox(
                           width: ui.sidebarWidth.clamp(200.0, 380.0),
-                          child: Container(
-                            color: p.sidebar,
-                            alignment: Alignment.topLeft,
-                            padding: const EdgeInsets.all(14),
-                            child: T(
-                              'Sidebar',
-                              size: 12,
-                              color: p.muted,
-                              weight: FontWeight.w600,
-                            ),
-                          ),
+                          child: ProjectsSidebar(state: state),
                         ),
                         _PaneDivider(
                           color: p.border,
@@ -109,7 +104,15 @@ class AppShell extends StatelessWidget {
                           },
                         ),
                       ],
-                      const Expanded(child: _HomeView()),
+                      Expanded(
+                        child: switch (ui.activeView) {
+                          'builder' => BuilderView(state: state),
+                          'gallery' => GalleryView(state: state),
+                          'workspace' when state.activeProject != null =>
+                            WorkspaceView(state: state),
+                          _ => HomeView(state: state),
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -138,8 +141,8 @@ class AppShell extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: p.dark
-                            ? const Color(0xFF3A3F47)
-                            : const Color(0xFF1F2328),
+                            ? const Color(0xFF2A2A2A)
+                            : const Color(0xFF1F1F1F),
                         borderRadius: BorderRadius.circular(8),
                         boxShadow: [
                           BoxShadow(
@@ -185,33 +188,6 @@ class _PaneDivider extends StatelessWidget {
           child: Center(child: Container(width: 1, color: color)),
         ),
       ),
-    );
-  }
-}
-
-/// Placeholder main view; replaced by the real feature screens.
-class _HomeView extends StatelessWidget {
-  const _HomeView();
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.pal;
-    return Stack(
-      children: [
-        const Positioned.fill(child: DotPatternBackground()),
-        Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(AppIcons.code, size: 28, color: p.muted),
-              const SizedBox(height: 10),
-              const T(AppConfig.NAME, size: 16, weight: FontWeight.w700),
-              const SizedBox(height: 4),
-              T(AppConfig.TAGLINE, size: 12, color: p.muted),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

@@ -1,0 +1,1509 @@
+# dot ASM processor definition. Edit here or in the processor builder.
+processor arm32 "ARM (ARMv7-A, A32 subset)" {
+  arch arm
+  vendor "Arm"
+  year 1985
+  era modern
+  tags RISC ARM 32-bit
+  describe "The 32-bit ARM instruction set: every instruction can be conditional (addeq, movlt, bne), data-processing with flags, load/store, push/pop and BL/BX calls. Subset: immediates are 0-255 (use movw/movt or ldr rd, =value for more), no shifted-register operands, r15/PC is not a general register."
+
+  word 32 little
+  fetch 32
+  aligned
+  comments "@" ";" "//"
+
+  registers r count 15 width 32 {
+    alias fp=11 ip=12 sp=13 lr=14
+  }
+  flags N Z C V
+  init sp=0x2fff0
+  reset 0x8000
+  pipeline Fetch Decode Execute
+
+  memory {
+    text  at 0x8000 size 0x8000 perms rx role text
+    data  at 0x10000 size 0x10000 perms rw role data
+    stack at 0x20000 size 0x10000 perms rw role stack
+  }
+
+  conditions field [31:28] default 14 {
+    eq 0 when Z
+    ne 1 when !Z
+    cs 2 when C
+    cc 3 when !C
+    mi 4 when N
+    pl 5 when !N
+    vs 6 when V
+    vc 7 when !V
+    hi 8 when C && !Z
+    ls 9 when !C || Z
+    ge 10 when N == V
+    lt 11 when N != V
+    gt 12 when !Z && N == V
+    le 13 when Z || N != V
+    al 14 when 1
+  }
+
+  instruction and "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x0
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Bitwise and"
+    exec {
+      v = rm;
+      res = rn & v;
+      rd = res;
+    }
+  }
+
+  instruction and "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2000000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Bitwise and"
+    exec {
+      v = imm;
+      res = rn & v;
+      rd = res;
+    }
+  }
+
+  instruction ands "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x100000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Bitwise and and set flags"
+    exec {
+      v = rm;
+      res = rn & v;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction ands "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2100000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Bitwise and and set flags"
+    exec {
+      v = imm;
+      res = rn & v;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction eor "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x200000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Bitwise exclusive or"
+    exec {
+      v = rm;
+      res = rn ^ v;
+      rd = res;
+    }
+  }
+
+  instruction eor "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2200000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Bitwise exclusive or"
+    exec {
+      v = imm;
+      res = rn ^ v;
+      rd = res;
+    }
+  }
+
+  instruction eors "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x300000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Bitwise exclusive or and set flags"
+    exec {
+      v = rm;
+      res = rn ^ v;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction eors "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2300000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Bitwise exclusive or and set flags"
+    exec {
+      v = imm;
+      res = rn ^ v;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction sub "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x400000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Subtract"
+    exec {
+      v = rm;
+      t = rn - v;
+      res = t & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction sub "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2400000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Subtract"
+    exec {
+      v = imm;
+      t = rn - v;
+      res = t & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction subs "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x500000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Subtract and set flags"
+    exec {
+      v = rm;
+      t = rn - v;
+      res = t & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = 1 - bit(t, 63);
+      V = bit((rn ^ v) & (rn ^ res), 31);
+    }
+  }
+
+  instruction subs "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2500000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Subtract and set flags"
+    exec {
+      v = imm;
+      t = rn - v;
+      res = t & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = 1 - bit(t, 63);
+      V = bit((rn ^ v) & (rn ^ res), 31);
+    }
+  }
+
+  instruction rsb "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x600000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Reverse subtract (op2 - rn)"
+    exec {
+      v = rm;
+      t = v - rn;
+      res = t & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction rsb "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2600000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Reverse subtract (op2 - rn)"
+    exec {
+      v = imm;
+      t = v - rn;
+      res = t & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction rsbs "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x700000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Reverse subtract (op2 - rn) and set flags"
+    exec {
+      v = rm;
+      t = v - rn;
+      res = t & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = 1 - bit(t, 63);
+      V = bit((v ^ rn) & (v ^ res), 31);
+    }
+  }
+
+  instruction rsbs "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2700000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Reverse subtract (op2 - rn) and set flags"
+    exec {
+      v = imm;
+      t = v - rn;
+      res = t & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = 1 - bit(t, 63);
+      V = bit((v ^ rn) & (v ^ res), 31);
+    }
+  }
+
+  instruction add "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x800000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Add"
+    exec {
+      v = rm;
+      t = rn + v;
+      res = t & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction add "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2800000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Add"
+    exec {
+      v = imm;
+      t = rn + v;
+      res = t & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction adds "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x900000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Add and set flags"
+    exec {
+      v = rm;
+      t = rn + v;
+      res = t & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = bit(t, 32);
+      V = bit((rn ^ res) & (v ^ res), 31);
+    }
+  }
+
+  instruction adds "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2900000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Add and set flags"
+    exec {
+      v = imm;
+      t = rn + v;
+      res = t & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = bit(t, 32);
+      V = bit((rn ^ res) & (v ^ res), 31);
+    }
+  }
+
+  instruction adc "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0xa00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Add with carry"
+    exec {
+      v = rm;
+      t = rn + v + C;
+      res = t & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction adc "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2a00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Add with carry"
+    exec {
+      v = imm;
+      t = rn + v + C;
+      res = t & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction adcs "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0xb00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Add with carry and set flags"
+    exec {
+      v = rm;
+      t = rn + v + C;
+      res = t & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = bit(t, 32);
+      V = bit((rn ^ res) & (v ^ res), 31);
+    }
+  }
+
+  instruction adcs "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2b00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Add with carry and set flags"
+    exec {
+      v = imm;
+      t = rn + v + C;
+      res = t & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = bit(t, 32);
+      V = bit((rn ^ res) & (v ^ res), 31);
+    }
+  }
+
+  instruction sbc "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0xc00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Subtract with carry"
+    exec {
+      v = rm;
+      t = rn - v - 1 + C;
+      res = t & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction sbc "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2c00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Subtract with carry"
+    exec {
+      v = imm;
+      t = rn - v - 1 + C;
+      res = t & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction sbcs "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0xd00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Subtract with carry and set flags"
+    exec {
+      v = rm;
+      t = rn - v - 1 + C;
+      res = t & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = 1 - bit(t, 63);
+      V = bit((rn ^ v) & (rn ^ res), 31);
+    }
+  }
+
+  instruction sbcs "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x2d00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Subtract with carry and set flags"
+    exec {
+      v = imm;
+      t = rn - v - 1 + C;
+      res = t & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = 1 - bit(t, 63);
+      V = bit((rn ^ v) & (rn ^ res), 31);
+    }
+  }
+
+  instruction tst "rn, rm" {
+    size 32
+    match 0xff0fff0 0x1100000
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Test bits (and), sets flags only"
+    exec {
+      v = rm;
+      res = rn & v;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction tst "rn, #imm" {
+    size 32
+    match 0xff0ff00 0x3100000
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Test bits (and), sets flags only"
+    exec {
+      v = imm;
+      res = rn & v;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction teq "rn, rm" {
+    size 32
+    match 0xff0fff0 0x1300000
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Test equivalence (xor), sets flags only"
+    exec {
+      v = rm;
+      res = rn ^ v;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction teq "rn, #imm" {
+    size 32
+    match 0xff0ff00 0x3300000
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Test equivalence (xor), sets flags only"
+    exec {
+      v = imm;
+      res = rn ^ v;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction cmp "rn, rm" {
+    size 32
+    match 0xff0fff0 0x1500000
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Compare (subtract), sets flags only"
+    exec {
+      v = rm;
+      t = rn - v;
+      res = t & 4294967295;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = 1 - bit(t, 63);
+      V = bit((rn ^ v) & (rn ^ res), 31);
+    }
+  }
+
+  instruction cmp "rn, #imm" {
+    size 32
+    match 0xff0ff00 0x3500000
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Compare (subtract), sets flags only"
+    exec {
+      v = imm;
+      t = rn - v;
+      res = t & 4294967295;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = 1 - bit(t, 63);
+      V = bit((rn ^ v) & (rn ^ res), 31);
+    }
+  }
+
+  instruction cmn "rn, rm" {
+    size 32
+    match 0xff0fff0 0x1700000
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Compare negative (add), sets flags only"
+    exec {
+      v = rm;
+      t = rn + v;
+      res = t & 4294967295;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = bit(t, 32);
+      V = bit((rn ^ res) & (v ^ res), 31);
+    }
+  }
+
+  instruction cmn "rn, #imm" {
+    size 32
+    match 0xff0ff00 0x3700000
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Compare negative (add), sets flags only"
+    exec {
+      v = imm;
+      t = rn + v;
+      res = t & 4294967295;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = bit(t, 32);
+      V = bit((rn ^ res) & (v ^ res), 31);
+    }
+  }
+
+  instruction orr "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x1800000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Bitwise or"
+    exec {
+      v = rm;
+      res = rn | v;
+      rd = res;
+    }
+  }
+
+  instruction orr "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x3800000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Bitwise or"
+    exec {
+      v = imm;
+      res = rn | v;
+      rd = res;
+    }
+  }
+
+  instruction orrs "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x1900000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Bitwise or and set flags"
+    exec {
+      v = rm;
+      res = rn | v;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction orrs "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x3900000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Bitwise or and set flags"
+    exec {
+      v = imm;
+      res = rn | v;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction mov "rd, rm" {
+    size 32
+    match 0xfff0ff0 0x1a00000
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    conditional
+    describe "Move"
+    exec {
+      v = rm;
+      res = v;
+      rd = res;
+    }
+  }
+
+  instruction mov "rd, #imm" {
+    size 32
+    match 0xfff0f00 0x3a00000
+    operand rd reg [15:12]
+    operand imm imm [7:0]
+    conditional
+    describe "Move"
+    exec {
+      v = imm;
+      res = v;
+      rd = res;
+    }
+  }
+
+  instruction movs "rd, rm" {
+    size 32
+    match 0xfff0ff0 0x1b00000
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    conditional
+    describe "Move and set flags"
+    exec {
+      v = rm;
+      res = v;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction movs "rd, #imm" {
+    size 32
+    match 0xfff0f00 0x3b00000
+    operand rd reg [15:12]
+    operand imm imm [7:0]
+    conditional
+    describe "Move and set flags"
+    exec {
+      v = imm;
+      res = v;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction bic "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x1c00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Bit clear (rn & ~op2)"
+    exec {
+      v = rm;
+      res = rn & ~v & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction bic "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x3c00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Bit clear (rn & ~op2)"
+    exec {
+      v = imm;
+      res = rn & ~v & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction bics "rd, rn, rm" {
+    size 32
+    match 0xff00ff0 0x1d00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand rm reg [3:0]
+    conditional
+    describe "Bit clear (rn & ~op2) and set flags"
+    exec {
+      v = rm;
+      res = rn & ~v & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction bics "rd, rn, #imm" {
+    size 32
+    match 0xff00f00 0x3d00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [7:0]
+    conditional
+    describe "Bit clear (rn & ~op2) and set flags"
+    exec {
+      v = imm;
+      res = rn & ~v & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction mvn "rd, rm" {
+    size 32
+    match 0xfff0ff0 0x1e00000
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    conditional
+    describe "Move not"
+    exec {
+      v = rm;
+      res = ~v & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction mvn "rd, #imm" {
+    size 32
+    match 0xfff0f00 0x3e00000
+    operand rd reg [15:12]
+    operand imm imm [7:0]
+    conditional
+    describe "Move not"
+    exec {
+      v = imm;
+      res = ~v & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction mvns "rd, rm" {
+    size 32
+    match 0xfff0ff0 0x1f00000
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    conditional
+    describe "Move not and set flags"
+    exec {
+      v = rm;
+      res = ~v & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction mvns "rd, #imm" {
+    size 32
+    match 0xfff0f00 0x3f00000
+    operand rd reg [15:12]
+    operand imm imm [7:0]
+    conditional
+    describe "Move not and set flags"
+    exec {
+      v = imm;
+      res = ~v & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction lsl "rd, rm, #imm" {
+    size 32
+    match 0xfff0070 0x1a00000
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    operand imm imm [11:7]
+    conditional
+    describe "Logical shift left by an immediate (0 = no shift)"
+    exec {
+      res = (rm << imm) & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction lsls "rd, rm, #imm" {
+    size 32
+    match 0xfff0070 0x1b00000
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    operand imm imm [11:7]
+    conditional
+    describe "Logical shift left by an immediate (0 = no shift) and set flags"
+    exec {
+      res = (rm << imm) & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = imm == 0 ? C : bit(rm, 32 - imm);
+    }
+  }
+
+  instruction lsr "rd, rm, #imm" {
+    size 32
+    match 0xfff0070 0x1a00020
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    operand imm imm [11:7]
+    conditional
+    describe "Logical shift right by an immediate (0 = no shift)"
+    exec {
+      res = (rm >> imm) & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction lsrs "rd, rm, #imm" {
+    size 32
+    match 0xfff0070 0x1b00020
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    operand imm imm [11:7]
+    conditional
+    describe "Logical shift right by an immediate (0 = no shift) and set flags"
+    exec {
+      res = (rm >> imm) & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = imm == 0 ? C : bit(rm, imm - 1);
+    }
+  }
+
+  instruction asr "rd, rm, #imm" {
+    size 32
+    match 0xfff0070 0x1a00040
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    operand imm imm [11:7]
+    conditional
+    describe "Arithmetic shift right by an immediate (0 = no shift)"
+    exec {
+      res = (sra(rm, imm)) & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction asrs "rd, rm, #imm" {
+    size 32
+    match 0xfff0070 0x1b00040
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    operand imm imm [11:7]
+    conditional
+    describe "Arithmetic shift right by an immediate (0 = no shift) and set flags"
+    exec {
+      res = (sra(rm, imm)) & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = imm == 0 ? C : bit(rm, imm - 1);
+    }
+  }
+
+  instruction ror "rd, rm, #imm" {
+    size 32
+    match 0xfff0070 0x1a00060
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    operand imm imm [11:7]
+    conditional
+    describe "Rotate right by an immediate (0 = no shift)"
+    exec {
+      res = (ror(rm, imm)) & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction rors "rd, rm, #imm" {
+    size 32
+    match 0xfff0070 0x1b00060
+    operand rd reg [15:12]
+    operand rm reg [3:0]
+    operand imm imm [11:7]
+    conditional
+    describe "Rotate right by an immediate (0 = no shift) and set flags"
+    exec {
+      res = (ror(rm, imm)) & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+      C = imm == 0 ? C : bit(rm, imm - 1);
+    }
+  }
+
+  instruction mul "rd, rm, rs" {
+    size 32
+    match 0xff0f0f0 0x90
+    operand rd reg [19:16]
+    operand rm reg [3:0]
+    operand rs reg [11:8]
+    cycles 3
+    conditional
+    describe "Multiply (low 32 bits)"
+    exec {
+      res = (rm * rs) & 4294967295;
+      rd = res;
+    }
+  }
+
+  instruction muls "rd, rm, rs" {
+    size 32
+    match 0xff0f0f0 0x100090
+    operand rd reg [19:16]
+    operand rm reg [3:0]
+    operand rs reg [11:8]
+    cycles 3
+    conditional
+    describe "Multiply (low 32 bits) and set flags"
+    exec {
+      res = (rm * rs) & 4294967295;
+      rd = res;
+      N = bit(res, 31);
+      Z = res == 0;
+    }
+  }
+
+  instruction b "target" {
+    size 32
+    match 0xf000000 0xa000000
+    operand target pcrel s[23:0]<<2
+    base 8
+    conditional
+    describe "Branch"
+    exec {
+      pc = pc + 8 + target;
+    }
+  }
+
+  instruction bl "target" {
+    size 32
+    match 0xf000000 0xb000000
+    operand target pcrel s[23:0]<<2
+    base 8
+    conditional
+    describe "Branch with link (call)"
+    exec {
+      lr = next;
+      pc = pc + 8 + target;
+    }
+  }
+
+  instruction bx "rm" {
+    size 32
+    match 0xffffff0 0x12fff10
+    operand rm reg [3:0]
+    conditional
+    describe "Branch to register (return with bx lr)"
+    exec {
+      pc = rm & ~1;
+    }
+  }
+
+  instruction ldr "rd, [rn]" {
+    size 32
+    match 0xff00fff 0x5900000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    cycles 2
+    conditional
+    describe "Load word"
+    exec {
+      rd = mem32[rn];
+    }
+  }
+
+  instruction ldr "rd, [rn, #imm]" {
+    size 32
+    match 0xff00000 0x5900000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Load word (offset)"
+    exec {
+      rd = mem32[rn + imm];
+    }
+  }
+
+  instruction ldr "rd, [rn, #-imm]" {
+    size 32
+    match 0xff00000 0x5100000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Load word (negative offset)"
+    exec {
+      rd = mem32[rn - imm];
+    }
+  }
+
+  instruction str "rd, [rn]" {
+    size 32
+    match 0xff00fff 0x5800000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    cycles 2
+    conditional
+    describe "Store word"
+    exec {
+      mem32[rn] = rd;
+    }
+  }
+
+  instruction str "rd, [rn, #imm]" {
+    size 32
+    match 0xff00000 0x5800000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Store word (offset)"
+    exec {
+      mem32[rn + imm] = rd;
+    }
+  }
+
+  instruction str "rd, [rn, #-imm]" {
+    size 32
+    match 0xff00000 0x5000000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Store word (negative offset)"
+    exec {
+      mem32[rn - imm] = rd;
+    }
+  }
+
+  instruction ldrb "rd, [rn]" {
+    size 32
+    match 0xff00fff 0x5d00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    cycles 2
+    conditional
+    describe "Load byte"
+    exec {
+      rd = mem8[rn];
+    }
+  }
+
+  instruction ldrb "rd, [rn, #imm]" {
+    size 32
+    match 0xff00000 0x5d00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Load byte (offset)"
+    exec {
+      rd = mem8[rn + imm];
+    }
+  }
+
+  instruction ldrb "rd, [rn, #-imm]" {
+    size 32
+    match 0xff00000 0x5500000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Load byte (negative offset)"
+    exec {
+      rd = mem8[rn - imm];
+    }
+  }
+
+  instruction strb "rd, [rn]" {
+    size 32
+    match 0xff00fff 0x5c00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    cycles 2
+    conditional
+    describe "Store byte"
+    exec {
+      mem8[rn] = rd;
+    }
+  }
+
+  instruction strb "rd, [rn, #imm]" {
+    size 32
+    match 0xff00000 0x5c00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Store byte (offset)"
+    exec {
+      mem8[rn + imm] = rd;
+    }
+  }
+
+  instruction strb "rd, [rn, #-imm]" {
+    size 32
+    match 0xff00000 0x5400000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Store byte (negative offset)"
+    exec {
+      mem8[rn - imm] = rd;
+    }
+  }
+
+  instruction str "rd, [rn, #-imm]!" {
+    size 32
+    match 0xff00000 0x5200000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Store word (pre-decrement, write back)"
+    exec {
+      t = rn - imm;
+      mem32[t] = rd;
+      rn = t;
+    }
+  }
+
+  instruction ldr "rd, [rn], #imm" {
+    size 32
+    match 0xff00000 0x4900000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Load word (post-increment, write back)"
+    exec {
+      t = rn;
+      rd = mem32[t];
+      rn = t + imm;
+    }
+  }
+
+  instruction strb "rd, [rn, #-imm]!" {
+    size 32
+    match 0xff00000 0x5600000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Store byte (pre-decrement, write back)"
+    exec {
+      t = rn - imm;
+      mem8[t] = rd;
+      rn = t;
+    }
+  }
+
+  instruction ldrb "rd, [rn], #imm" {
+    size 32
+    match 0xff00000 0x4d00000
+    operand rd reg [15:12]
+    operand rn reg [19:16]
+    operand imm imm [11:0]
+    cycles 2
+    conditional
+    describe "Load byte (post-increment, write back)"
+    exec {
+      t = rn;
+      rd = mem8[t];
+      rn = t + imm;
+    }
+  }
+
+  instruction movw "rd, #imm" {
+    size 32
+    match 0xff00000 0x3000000
+    operand rd reg [15:12]
+    operand imm imm [19:16,11:0]
+    conditional
+    describe "Move a 16-bit immediate (clears the upper half)"
+    exec {
+      rd = imm;
+    }
+  }
+
+  instruction movt "rd, #imm" {
+    size 32
+    match 0xff00000 0x3400000
+    operand rd reg [15:12]
+    operand imm imm [19:16,11:0]
+    conditional
+    describe "Move a 16-bit immediate into the upper half"
+    exec {
+      rd = (rd & 65535) | (imm << 16);
+    }
+  }
+
+  instruction svc "#imm" {
+    size 32
+    match 0xf000000 0xf000000
+    operand imm imm [23:0]
+    conditional
+    describe "Supervisor call: #1 exit, #2 print r0 as int, #3 print r0 as char, #4 print string at r0"
+    exec {
+      if (imm == 1) {
+        halt();
+      } else if (imm == 2) {
+        out("int", r0);
+      } else if (imm == 3) {
+        out("char", r0);
+      } else if (imm == 4) {
+        out("str", r0);
+      } else {
+        trap("Unsupported svc number (1 exit, 2 print int, 3 print char, 4 print string)");
+      }
+    }
+  }
+
+  pseudo "nop" {
+    expand {
+      mov r0, r0
+    }
+  }
+
+  pseudo "mov rd, #imm" {
+    when "imm >= 0 && imm <= 65535" {
+      movw rd, #imm
+    }
+    otherwise {
+      movw rd, #(imm) & 65535
+      movt rd, #((imm) >> 16) & 65535
+    }
+  }
+
+  pseudo "ldr rd, =imm" {
+    when "imm >= 0 && imm <= 65535" {
+      movw rd, #imm
+    }
+    otherwise {
+      movw rd, #(imm) & 65535
+      movt rd, #((imm) >> 16) & 65535
+    }
+  }
+
+  pseudo "neg rd, rm" {
+    expand {
+      rsb rd, rm, #0
+    }
+  }
+
+  pseudo "ret" {
+    expand {
+      bx lr
+    }
+  }
+
+  pseudo "push {a}" {
+    expand {
+      str a, [sp, #-4]!
+    }
+  }
+
+  pseudo "push {a, b}" {
+    expand {
+      str b, [sp, #-4]!
+      str a, [sp, #-4]!
+    }
+  }
+
+  pseudo "push {a, b, c}" {
+    expand {
+      str c, [sp, #-4]!
+      str b, [sp, #-4]!
+      str a, [sp, #-4]!
+    }
+  }
+
+  pseudo "push {a, b, c, d}" {
+    expand {
+      str d, [sp, #-4]!
+      str c, [sp, #-4]!
+      str b, [sp, #-4]!
+      str a, [sp, #-4]!
+    }
+  }
+
+  pseudo "pop {a}" {
+    expand {
+      ldr a, [sp], #4
+    }
+  }
+
+  pseudo "pop {a, b}" {
+    expand {
+      ldr a, [sp], #4
+      ldr b, [sp], #4
+    }
+  }
+
+  pseudo "pop {a, b, c}" {
+    expand {
+      ldr a, [sp], #4
+      ldr b, [sp], #4
+      ldr c, [sp], #4
+    }
+  }
+
+  pseudo "pop {a, b, c, d}" {
+    expand {
+      ldr a, [sp], #4
+      ldr b, [sp], #4
+      ldr c, [sp], #4
+      ldr d, [sp], #4
+    }
+  }
+
+  sample """
+    @ Sum 1..10, call a function that doubles it, then print the result.
+    @ svc #1 exit, #2 print r0 as a number, #4 print the string at r0.
+            .data
+    msg:    .asciz "result = "
+
+            .text
+    main:
+            mov   r0, #0          @ sum
+            mov   r1, #1          @ i
+    loop:
+            add   r0, r0, r1      @ sum += i
+            add   r1, r1, #1      @ i++
+            cmp   r1, #10         @ compare i with 10 (sets N Z C V)
+            ble   loop            @ conditional branch: i <= 10
+
+            bl    double          @ call: r0 = r0 * 2
+            mov   r4, r0          @ keep the result
+
+            ldr   r0, =msg
+            svc   #4              @ print string
+            mov   r0, r4
+            svc   #2              @ print integer
+            svc   #1              @ exit
+
+    double:
+            push  {lr}
+            add   r0, r0, r0
+            pop   {lr}
+            bx    lr
+  """
+}

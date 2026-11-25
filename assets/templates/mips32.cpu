@@ -1,0 +1,792 @@
+# dot ASM processor definition. Edit here or in the processor builder.
+processor mips32 "MIPS32" {
+  arch mips
+  vendor "MIPS Technologies"
+  year 1985
+  era legacy
+  tags RISC MIPS 32-bit
+  describe "The classic 32-bit MIPS RISC: 32 registers, fixed 32-bit R/I/J instruction formats, load/store architecture, HI/LO for multiply and divide. Branch delay slots are not simulated: branches take effect immediately."
+
+  word 32 little
+  fetch 32
+  aligned
+  comments "#" ";"
+
+  registers $ count 32 width 32 {
+    zero 0
+    alias $zero=0 $at=1 $v0=2 $v1=3 $a0=4 $a1=5 $a2=6 $a3=7
+    alias $t0=8 $t1=9 $t2=10 $t3=11 $t4=12 $t5=13 $t6=14 $t7=15
+    alias $s0=16 $s1=17 $s2=18 $s3=19 $s4=20 $s5=21 $s6=22 $s7=23
+    alias $t8=24 $t9=25 $k0=26 $k1=27 $gp=28 $sp=29 $fp=30 $ra=31
+    alias $s8=30
+  }
+  register HI width 32 "High half of multiply, remainder of divide"
+  register LO width 32 "Low half of multiply, quotient of divide"
+  init $sp=0x7ffffffc $gp=0x10018000
+  reset 0x400000
+  pipeline IF ID EX MEM WB
+
+  memory {
+    text  at 0x400000 size 0x10000 perms rx role text
+    data  at 0x10010000 size 0x10000 perms rw role data
+    stack at 0x7ffe0000 size 0x20000 perms rw role stack
+  }
+
+  instruction addu "rd, rs, rt" {
+    size 32
+    match 0xfc0007ff 0x21
+    operand rd reg [15:11]
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    describe "rd = rs + rt"
+    exec {
+      rd = rs + rt;
+    }
+  }
+
+  instruction add "rd, rs, rt" {
+    size 32
+    match 0xfc0007ff 0x20
+    operand rd reg [15:11]
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    describe "rd = rs + rt (overflow trap not simulated)"
+    exec {
+      rd = rs + rt;
+    }
+  }
+
+  instruction subu "rd, rs, rt" {
+    size 32
+    match 0xfc0007ff 0x23
+    operand rd reg [15:11]
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    describe "rd = rs - rt"
+    exec {
+      rd = rs - rt;
+    }
+  }
+
+  instruction sub "rd, rs, rt" {
+    size 32
+    match 0xfc0007ff 0x22
+    operand rd reg [15:11]
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    describe "rd = rs - rt (overflow trap not simulated)"
+    exec {
+      rd = rs - rt;
+    }
+  }
+
+  instruction and "rd, rs, rt" {
+    size 32
+    match 0xfc0007ff 0x24
+    operand rd reg [15:11]
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    describe "Bitwise and"
+    exec {
+      rd = rs & rt;
+    }
+  }
+
+  instruction or "rd, rs, rt" {
+    size 32
+    match 0xfc0007ff 0x25
+    operand rd reg [15:11]
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    describe "Bitwise or"
+    exec {
+      rd = rs | rt;
+    }
+  }
+
+  instruction xor "rd, rs, rt" {
+    size 32
+    match 0xfc0007ff 0x26
+    operand rd reg [15:11]
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    describe "Bitwise xor"
+    exec {
+      rd = rs ^ rt;
+    }
+  }
+
+  instruction nor "rd, rs, rt" {
+    size 32
+    match 0xfc0007ff 0x27
+    operand rd reg [15:11]
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    describe "Bitwise nor"
+    exec {
+      rd = ~(rs | rt);
+    }
+  }
+
+  instruction slt "rd, rs, rt" {
+    size 32
+    match 0xfc0007ff 0x2a
+    operand rd reg [15:11]
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    describe "Set on less than (signed)"
+    exec {
+      rd = rs < rt ? 1 : 0;
+    }
+  }
+
+  instruction sltu "rd, rs, rt" {
+    size 32
+    match 0xfc0007ff 0x2b
+    operand rd reg [15:11]
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    describe "Set on less than (unsigned)"
+    exec {
+      rd = ltu(rs, rt) ? 1 : 0;
+    }
+  }
+
+  instruction sll "rd, rt, shamt" {
+    size 32
+    match 0xffe0003f 0x0
+    operand rd reg [15:11]
+    operand rt reg [20:16]
+    operand shamt imm [10:6]
+    describe "Shift left logical"
+    exec {
+      rd = rt << shamt;
+    }
+  }
+
+  instruction srl "rd, rt, shamt" {
+    size 32
+    match 0xffe0003f 0x2
+    operand rd reg [15:11]
+    operand rt reg [20:16]
+    operand shamt imm [10:6]
+    describe "Shift right logical"
+    exec {
+      rd = rt >> shamt;
+    }
+  }
+
+  instruction sra "rd, rt, shamt" {
+    size 32
+    match 0xffe0003f 0x3
+    operand rd reg [15:11]
+    operand rt reg [20:16]
+    operand shamt imm [10:6]
+    describe "Shift right arithmetic"
+    exec {
+      rd = sra(rt, shamt);
+    }
+  }
+
+  instruction sllv "rd, rt, rs" {
+    size 32
+    match 0xfc0007ff 0x4
+    operand rd reg [15:11]
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    describe "Shift left logical by register"
+    exec {
+      rd = rt << (rs & 31);
+    }
+  }
+
+  instruction srlv "rd, rt, rs" {
+    size 32
+    match 0xfc0007ff 0x6
+    operand rd reg [15:11]
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    describe "Shift right logical by register"
+    exec {
+      rd = rt >> (rs & 31);
+    }
+  }
+
+  instruction srav "rd, rt, rs" {
+    size 32
+    match 0xfc0007ff 0x7
+    operand rd reg [15:11]
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    describe "Shift right arithmetic by register"
+    exec {
+      rd = sra(rt, rs & 31);
+    }
+  }
+
+  instruction jr "rs" {
+    size 32
+    match 0xfc1fffff 0x8
+    operand rs reg [25:21]
+    describe "Jump register"
+    exec {
+      pc = rs;
+    }
+  }
+
+  instruction jalr "rd, rs" {
+    size 32
+    match 0xfc1f07ff 0x9
+    operand rd reg [15:11]
+    operand rs reg [25:21]
+    describe "Jump and link register"
+    exec {
+      t = next;
+      pc = rs;
+      rd = t;
+    }
+  }
+
+  instruction mult "rs, rt" {
+    size 32
+    match 0xfc00ffff 0x18
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    cycles 4
+    describe "Signed multiply into HI:LO"
+    exec {
+      HI = mulh(rs, rt);
+      LO = rs * rt;
+    }
+  }
+
+  instruction multu "rs, rt" {
+    size 32
+    match 0xfc00ffff 0x19
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    cycles 4
+    describe "Unsigned multiply into HI:LO"
+    exec {
+      HI = mulhu(rs, rt);
+      LO = rs * rt;
+    }
+  }
+
+  instruction div "rs, rt" {
+    size 32
+    match 0xfc00ffff 0x1a
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    cycles 10
+    describe "Signed divide: LO = quotient, HI = remainder"
+    exec {
+      LO = rs / rt;
+      HI = rs % rt;
+    }
+  }
+
+  instruction divu "rs, rt" {
+    size 32
+    match 0xfc00ffff 0x1b
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    cycles 10
+    describe "Unsigned divide"
+    exec {
+      LO = divu(rs, rt);
+      HI = remu(rs, rt);
+    }
+  }
+
+  instruction mfhi "rd" {
+    size 32
+    match 0xffff07ff 0x10
+    operand rd reg [15:11]
+    describe "Move from HI"
+    exec {
+      rd = HI;
+    }
+  }
+
+  instruction mflo "rd" {
+    size 32
+    match 0xffff07ff 0x12
+    operand rd reg [15:11]
+    describe "Move from LO"
+    exec {
+      rd = LO;
+    }
+  }
+
+  instruction syscall "" {
+    size 32
+    match 0xffffffff 0xc
+    describe "System call: $v0=1 print int, 4 print string, 11 print char, 10 exit"
+    exec {
+      if ($v0 == 10) {
+        halt();
+      } else if ($v0 == 1) {
+        out("int", $a0);
+      } else if ($v0 == 4) {
+        out("str", $a0);
+      } else if ($v0 == 11) {
+        out("char", $a0);
+      } else {
+        trap("Unsupported syscall (the service number is in $v0)");
+      }
+    }
+  }
+
+  instruction break "" {
+    size 32
+    match 0xffffffff 0xd
+    describe "Breakpoint: stops the program"
+    exec {
+      halt();
+    }
+  }
+
+  instruction addi "rt, rs, imm" {
+    size 32
+    match 0xfc000000 0x20000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    describe "rt = rs + imm (overflow trap not simulated)"
+    exec {
+      rt = rs + imm;
+    }
+  }
+
+  instruction addiu "rt, rs, imm" {
+    size 32
+    match 0xfc000000 0x24000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    describe "rt = rs + imm"
+    exec {
+      rt = rs + imm;
+    }
+  }
+
+  instruction slti "rt, rs, imm" {
+    size 32
+    match 0xfc000000 0x28000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    describe "Set on less than immediate (signed)"
+    exec {
+      rt = rs < imm ? 1 : 0;
+    }
+  }
+
+  instruction sltiu "rt, rs, imm" {
+    size 32
+    match 0xfc000000 0x2c000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    describe "Set on less than immediate (unsigned)"
+    exec {
+      rt = ltu(rs, imm) ? 1 : 0;
+    }
+  }
+
+  instruction andi "rt, rs, imm" {
+    size 32
+    match 0xfc000000 0x30000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm [15:0]
+    describe "Bitwise and with zero-extended immediate"
+    exec {
+      rt = rs & imm;
+    }
+  }
+
+  instruction ori "rt, rs, imm" {
+    size 32
+    match 0xfc000000 0x34000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm [15:0]
+    describe "Bitwise or with zero-extended immediate"
+    exec {
+      rt = rs | imm;
+    }
+  }
+
+  instruction xori "rt, rs, imm" {
+    size 32
+    match 0xfc000000 0x38000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm [15:0]
+    describe "Bitwise xor with zero-extended immediate"
+    exec {
+      rt = rs ^ imm;
+    }
+  }
+
+  instruction lui "rt, imm" {
+    size 32
+    match 0xffe00000 0x3c000000
+    operand rt reg [20:16]
+    operand imm imm [15:0]
+    describe "Load upper immediate"
+    exec {
+      rt = imm << 16;
+    }
+  }
+
+  instruction lb "rt, imm(rs)" {
+    size 32
+    match 0xfc000000 0x80000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    cycles 2
+    describe "Load byte (sign-extended)"
+    exec {
+      rt = sext(mem8[rs + imm], 8);
+    }
+  }
+
+  instruction lh "rt, imm(rs)" {
+    size 32
+    match 0xfc000000 0x84000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    cycles 2
+    describe "Load halfword (sign-extended)"
+    exec {
+      rt = sext(mem16[rs + imm], 16);
+    }
+  }
+
+  instruction lw "rt, imm(rs)" {
+    size 32
+    match 0xfc000000 0x8c000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    cycles 2
+    describe "Load word"
+    exec {
+      rt = mem32[rs + imm];
+    }
+  }
+
+  instruction lbu "rt, imm(rs)" {
+    size 32
+    match 0xfc000000 0x90000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    cycles 2
+    describe "Load byte (zero-extended)"
+    exec {
+      rt = mem8[rs + imm];
+    }
+  }
+
+  instruction lhu "rt, imm(rs)" {
+    size 32
+    match 0xfc000000 0x94000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    cycles 2
+    describe "Load halfword (zero-extended)"
+    exec {
+      rt = mem16[rs + imm];
+    }
+  }
+
+  instruction sb "rt, imm(rs)" {
+    size 32
+    match 0xfc000000 0xa0000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    cycles 2
+    describe "Store byte"
+    exec {
+      mem8[rs + imm] = rt;
+    }
+  }
+
+  instruction sh "rt, imm(rs)" {
+    size 32
+    match 0xfc000000 0xa4000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    cycles 2
+    describe "Store halfword"
+    exec {
+      mem16[rs + imm] = rt;
+    }
+  }
+
+  instruction sw "rt, imm(rs)" {
+    size 32
+    match 0xfc000000 0xac000000
+    operand rt reg [20:16]
+    operand rs reg [25:21]
+    operand imm imm s[15:0]
+    cycles 2
+    describe "Store word"
+    exec {
+      mem32[rs + imm] = rt;
+    }
+  }
+
+  instruction beq "rs, rt, target" {
+    size 32
+    match 0xfc000000 0x10000000
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    operand target pcrel s[15:0]<<2
+    base 4
+    describe "Branch if equal (no delay slot)"
+    exec {
+      if (rs == rt) {
+        pc = pc + 4 + target;
+      }
+    }
+  }
+
+  instruction bne "rs, rt, target" {
+    size 32
+    match 0xfc000000 0x14000000
+    operand rs reg [25:21]
+    operand rt reg [20:16]
+    operand target pcrel s[15:0]<<2
+    base 4
+    describe "Branch if not equal (no delay slot)"
+    exec {
+      if (rs != rt) {
+        pc = pc + 4 + target;
+      }
+    }
+  }
+
+  instruction blez "rs, target" {
+    size 32
+    match 0xfc1f0000 0x18000000
+    operand rs reg [25:21]
+    operand target pcrel s[15:0]<<2
+    base 4
+    describe "Branch if <= 0"
+    exec {
+      if (rs <= 0) {
+        pc = pc + 4 + target;
+      }
+    }
+  }
+
+  instruction bgtz "rs, target" {
+    size 32
+    match 0xfc1f0000 0x1c000000
+    operand rs reg [25:21]
+    operand target pcrel s[15:0]<<2
+    base 4
+    describe "Branch if > 0"
+    exec {
+      if (rs > 0) {
+        pc = pc + 4 + target;
+      }
+    }
+  }
+
+  instruction bltz "rs, target" {
+    size 32
+    match 0xfc1f0000 0x4000000
+    operand rs reg [25:21]
+    operand target pcrel s[15:0]<<2
+    base 4
+    describe "Branch if < 0"
+    exec {
+      if (rs < 0) {
+        pc = pc + 4 + target;
+      }
+    }
+  }
+
+  instruction bgez "rs, target" {
+    size 32
+    match 0xfc1f0000 0x4010000
+    operand rs reg [25:21]
+    operand target pcrel s[15:0]<<2
+    base 4
+    describe "Branch if >= 0"
+    exec {
+      if (rs >= 0) {
+        pc = pc + 4 + target;
+      }
+    }
+  }
+
+  instruction j "target" {
+    size 32
+    match 0xfc000000 0x8000000
+    operand target imm [25:0]<<2
+    describe "Jump"
+    exec {
+      pc = (next & 0xf0000000) | target;
+    }
+  }
+
+  instruction jal "target" {
+    size 32
+    match 0xfc000000 0xc000000
+    operand target imm [25:0]<<2
+    describe "Jump and link"
+    exec {
+      $ra = next;
+      pc = (next & 0xf0000000) | target;
+    }
+  }
+
+  pseudo "nop" {
+    expand {
+      sll $zero, $zero, 0
+    }
+  }
+
+  pseudo "move rd, rs" {
+    expand {
+      addu rd, $zero, rs
+    }
+  }
+
+  pseudo "li rt, imm" {
+    when "imm >= -32768 && imm <= 32767" {
+      addiu rt, $zero, imm
+    }
+    when "imm >= 0 && imm <= 65535" {
+      ori rt, $zero, imm
+    }
+    otherwise {
+      lui rt, ((imm) >> 16) & 65535
+      ori rt, rt, (imm) & 65535
+    }
+  }
+
+  pseudo "la rt, sym" {
+    expand {
+      lui rt, ((sym) >> 16) & 65535
+      ori rt, rt, (sym) & 65535
+    }
+  }
+
+  pseudo "b target" {
+    expand {
+      beq $zero, $zero, target
+    }
+  }
+
+  pseudo "beqz rs, target" {
+    expand {
+      beq rs, $zero, target
+    }
+  }
+
+  pseudo "bnez rs, target" {
+    expand {
+      bne rs, $zero, target
+    }
+  }
+
+  pseudo "blt rs, rt, target" {
+    expand {
+      slt $at, rs, rt
+      bne $at, $zero, target
+    }
+  }
+
+  pseudo "bgt rs, rt, target" {
+    expand {
+      slt $at, rt, rs
+      bne $at, $zero, target
+    }
+  }
+
+  pseudo "ble rs, rt, target" {
+    expand {
+      slt $at, rt, rs
+      beq $at, $zero, target
+    }
+  }
+
+  pseudo "bge rs, rt, target" {
+    expand {
+      slt $at, rs, rt
+      beq $at, $zero, target
+    }
+  }
+
+  pseudo "not rd, rs" {
+    expand {
+      nor rd, rs, $zero
+    }
+  }
+
+  pseudo "neg rd, rs" {
+    expand {
+      sub rd, $zero, rs
+    }
+  }
+
+  pseudo "jalr rs" {
+    expand {
+      jalr $ra, rs
+    }
+  }
+
+  pseudo "mul rd, rs, rt" {
+    expand {
+      mult rs, rt
+      mflo rd
+    }
+  }
+
+  sample """
+    # Sum 1..10 with a loop, then call a function that doubles it.
+    # Syscalls (SPIM style): $v0 = 1 print int, 4 print string, 10 exit.
+            .data
+    msg:    .asciiz "result = "
+
+            .text
+    main:
+            li    $t0, 0            # sum
+            li    $t1, 1            # i
+            li    $t2, 10           # limit
+    loop:
+            addu  $t0, $t0, $t1     # sum += i
+            addiu $t1, $t1, 1       # i++
+            ble   $t1, $t2, loop    # (pseudo) repeat while i <= 10
+
+            move  $a0, $t0
+            jal   double            # call
+            move  $t3, $v0
+
+            la    $a0, msg
+            li    $v0, 4
+            syscall                 # print "result = "
+            move  $a0, $t3
+            li    $v0, 1
+            syscall                 # print the number
+            li    $v0, 10
+            syscall                 # exit
+
+    double:
+            addu  $v0, $a0, $a0
+            jr    $ra
+  """
+}

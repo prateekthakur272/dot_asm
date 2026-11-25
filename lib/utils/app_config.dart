@@ -15,7 +15,8 @@ final class AppConfig {
       'Copyright © 2026 dev.prateekthakur. All rights reserved.';
   static const String VENDOR = 'Prateek Thakur';
   static const String TAGLINE = 'A fast, file-first desktop app.';
-  static const String DESCRIPTION = 'dot ASM is a fast, file-first desktop app.';
+  static const String DESCRIPTION =
+      'dot ASM is a fast, file-first desktop app.';
   static const String REPOSITORY =
       'https://github.com/prateekthakur272/dot_asm';
   static const String HOMEPAGE = REPOSITORY;

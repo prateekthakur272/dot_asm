@@ -1,0 +1,1313 @@
+# dot ASM processor definition. Edit here or in the processor builder.
+processor avr "Atmel AVR (ATmega subset)" {
+  arch avr
+  vendor "Atmel / Microchip"
+  year 1996
+  era modern
+  tags RISC 8-bit AVR Microcontroller
+  describe "The 8-bit RISC microcontroller of Arduino boards: 32 registers, 16-bit instructions, SREG flags (I T H S V N Z C), X/Y/Z pointer registers, in/out I/O space and a stack in SRAM. Subset of ATmega instructions. Flash and SRAM share one address space here (real AVR is Harvard) and branch targets are byte addresses."
+
+  word 16 little
+  fetch 16
+  wordbytes 2
+  comments ";" "//"
+
+  registers r count 32 width 8 {
+    alias XL=26 XH=27 YL=28 YH=29 ZL=30 ZH=31
+  }
+  register SP width 16 "Stack pointer (I/O 0x3D low, 0x3E high)"
+  flags I T H S V N Z C
+  init SP=0x8ff
+  reset 0x8000
+  pipeline Fetch Execute
+
+  memory {
+    io    at 0x0 size 0x100 perms rw
+    sram  at 0x100 size 0x800 perms rw role data
+    flash at 0x8000 size 0x4000 perms rx role text
+  }
+
+  instruction add "rd, rr" {
+    size 16
+    match 0xfc00 0xc00
+    operand rd reg [8:4]
+    operand rr reg [9,3:0]
+    describe "Add"
+    exec {
+      t = rd + rr;
+      res = t & 255;
+      H = bit((rd & rr) | (rr & ~res) | (~res & rd), 3);
+      C = bit(t, 8);
+      V = bit((rd ^ res) & (rr ^ res), 7);
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction adc "rd, rr" {
+    size 16
+    match 0xfc00 0x1c00
+    operand rd reg [8:4]
+    operand rr reg [9,3:0]
+    describe "Add with carry"
+    exec {
+      t = rd + rr + C;
+      res = t & 255;
+      H = bit((rd & rr) | (rr & ~res) | (~res & rd), 3);
+      C = bit(t, 8);
+      V = bit((rd ^ res) & (rr ^ res), 7);
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction sub "rd, rr" {
+    size 16
+    match 0xfc00 0x1800
+    operand rd reg [8:4]
+    operand rr reg [9,3:0]
+    describe "Subtract"
+    exec {
+      t = rd - rr;
+      res = t & 255;
+      H = bit((~rd & rr) | (rr & res) | (res & ~rd), 3);
+      C = bit(t, 63);
+      V = bit((rd ^ rr) & (rd ^ res), 7);
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction sbc "rd, rr" {
+    size 16
+    match 0xfc00 0x800
+    operand rd reg [8:4]
+    operand rr reg [9,3:0]
+    describe "Subtract with carry (Z only stays set if it was set)"
+    exec {
+      t = rd - rr - C;
+      res = t & 255;
+      H = bit((~rd & rr) | (rr & res) | (res & ~rd), 3);
+      C = bit(t, 63);
+      V = bit((rd ^ rr) & (rd ^ res), 7);
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0 && Z;
+      rd = res;
+    }
+  }
+
+  instruction cp "rd, rr" {
+    size 16
+    match 0xfc00 0x1400
+    operand rd reg [8:4]
+    operand rr reg [9,3:0]
+    describe "Compare (subtract, flags only)"
+    exec {
+      t = rd - rr;
+      res = t & 255;
+      H = bit((~rd & rr) | (rr & res) | (res & ~rd), 3);
+      C = bit(t, 63);
+      V = bit((rd ^ rr) & (rd ^ res), 7);
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+    }
+  }
+
+  instruction cpc "rd, rr" {
+    size 16
+    match 0xfc00 0x400
+    operand rd reg [8:4]
+    operand rr reg [9,3:0]
+    describe "Compare with carry"
+    exec {
+      t = rd - rr - C;
+      res = t & 255;
+      H = bit((~rd & rr) | (rr & res) | (res & ~rd), 3);
+      C = bit(t, 63);
+      V = bit((rd ^ rr) & (rd ^ res), 7);
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0 && Z;
+    }
+  }
+
+  instruction and "rd, rr" {
+    size 16
+    match 0xfc00 0x2000
+    operand rd reg [8:4]
+    operand rr reg [9,3:0]
+    describe "Bitwise and"
+    exec {
+      res = rd & rr;
+      V = 0;
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction or "rd, rr" {
+    size 16
+    match 0xfc00 0x2800
+    operand rd reg [8:4]
+    operand rr reg [9,3:0]
+    describe "Bitwise or"
+    exec {
+      res = rd | rr;
+      V = 0;
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction eor "rd, rr" {
+    size 16
+    match 0xfc00 0x2400
+    operand rd reg [8:4]
+    operand rr reg [9,3:0]
+    describe "Bitwise exclusive or"
+    exec {
+      res = rd ^ rr;
+      V = 0;
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction mov "rd, rr" {
+    size 16
+    match 0xfc00 0x2c00
+    operand rd reg [8:4]
+    operand rr reg [9,3:0]
+    describe "Copy a register"
+    exec {
+      rd = rr;
+    }
+  }
+
+  instruction mul "rd, rr" {
+    size 16
+    match 0xfc00 0x9c00
+    operand rd reg [8:4]
+    operand rr reg [9,3:0]
+    describe "Unsigned multiply: r1:r0 = rd * rr"
+    exec {
+      p = rd * rr;
+      r0 = p & 255;
+      r1 = (p >> 8) & 255;
+      C = bit(p, 15);
+      Z = (p & 65535) == 0;
+    }
+  }
+
+  instruction ldi "rd, imm" {
+    size 16
+    match 0xf000 0xe000
+    operand rd reg [7:4]+16
+    operand imm imm [11:8,3:0]
+    describe "Load an 8-bit constant (r16..r31 only)"
+    exec {
+      rd = imm;
+    }
+  }
+
+  instruction subi "rd, imm" {
+    size 16
+    match 0xf000 0x5000
+    operand rd reg [7:4]+16
+    operand imm imm [11:8,3:0]
+    describe "Subtract an immediate"
+    exec {
+      t = rd - imm;
+      res = t & 255;
+      H = bit((~rd & imm) | (imm & res) | (res & ~rd), 3);
+      C = bit(t, 63);
+      V = bit((rd ^ imm) & (rd ^ res), 7);
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction sbci "rd, imm" {
+    size 16
+    match 0xf000 0x4000
+    operand rd reg [7:4]+16
+    operand imm imm [11:8,3:0]
+    describe "Subtract an immediate with carry"
+    exec {
+      t = rd - imm - C;
+      res = t & 255;
+      H = bit((~rd & imm) | (imm & res) | (res & ~rd), 3);
+      C = bit(t, 63);
+      V = bit((rd ^ imm) & (rd ^ res), 7);
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0 && Z;
+      rd = res;
+    }
+  }
+
+  instruction cpi "rd, imm" {
+    size 16
+    match 0xf000 0x3000
+    operand rd reg [7:4]+16
+    operand imm imm [11:8,3:0]
+    describe "Compare with an immediate"
+    exec {
+      t = rd - imm;
+      res = t & 255;
+      H = bit((~rd & imm) | (imm & res) | (res & ~rd), 3);
+      C = bit(t, 63);
+      V = bit((rd ^ imm) & (rd ^ res), 7);
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+    }
+  }
+
+  instruction andi "rd, imm" {
+    size 16
+    match 0xf000 0x7000
+    operand rd reg [7:4]+16
+    operand imm imm [11:8,3:0]
+    describe "Bitwise and with an immediate"
+    exec {
+      res = rd & imm;
+      V = 0;
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction ori "rd, imm" {
+    size 16
+    match 0xf000 0x6000
+    operand rd reg [7:4]+16
+    operand imm imm [11:8,3:0]
+    describe "Bitwise or with an immediate"
+    exec {
+      res = rd | imm;
+      V = 0;
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction com "rd" {
+    size 16
+    match 0xfe0f 0x9400
+    operand rd reg [8:4]
+    describe "One's complement"
+    exec {
+      res = ~rd & 255;
+      C = 1;
+      V = 0;
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction neg "rd" {
+    size 16
+    match 0xfe0f 0x9401
+    operand rd reg [8:4]
+    describe "Two's complement"
+    exec {
+      res = (0 - rd) & 255;
+      H = bit(res | rd, 3);
+      V = res == 128;
+      C = res != 0;
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction swap "rd" {
+    size 16
+    match 0xfe0f 0x9402
+    operand rd reg [8:4]
+    describe "Swap the nibbles"
+    exec {
+      rd = ((rd << 4) | (rd >> 4)) & 255;
+    }
+  }
+
+  instruction inc "rd" {
+    size 16
+    match 0xfe0f 0x9403
+    operand rd reg [8:4]
+    describe "Increment (C unchanged)"
+    exec {
+      res = (rd + 1) & 255;
+      V = res == 128;
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction asr "rd" {
+    size 16
+    match 0xfe0f 0x9405
+    operand rd reg [8:4]
+    describe "Arithmetic shift right"
+    exec {
+      C = bit(rd, 0);
+      res = (rd >> 1) | (rd & 128);
+      N = bit(res, 7);
+      V = N ^ C;
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction lsr "rd" {
+    size 16
+    match 0xfe0f 0x9406
+    operand rd reg [8:4]
+    describe "Logical shift right"
+    exec {
+      C = bit(rd, 0);
+      res = rd >> 1;
+      N = 0;
+      V = C;
+      S = V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction ror "rd" {
+    size 16
+    match 0xfe0f 0x9407
+    operand rd reg [8:4]
+    describe "Rotate right through carry"
+    exec {
+      c = C;
+      C = bit(rd, 0);
+      res = (rd >> 1) | (c << 7);
+      N = bit(res, 7);
+      V = N ^ C;
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction dec "rd" {
+    size 16
+    match 0xfe0f 0x940a
+    operand rd reg [8:4]
+    describe "Decrement (C unchanged)"
+    exec {
+      res = (rd - 1) & 255;
+      V = res == 127;
+      N = bit(res, 7);
+      S = N ^ V;
+      Z = res == 0;
+      rd = res;
+    }
+  }
+
+  instruction push "rr" {
+    size 16
+    match 0xfe0f 0x920f
+    operand rr reg [8:4]
+    cycles 2
+    describe "Push a register"
+    exec {
+      mem8[SP] = rr;
+      SP = SP - 1;
+    }
+  }
+
+  instruction pop "rd" {
+    size 16
+    match 0xfe0f 0x900f
+    operand rd reg [8:4]
+    cycles 2
+    describe "Pop into a register"
+    exec {
+      SP = SP + 1;
+      rd = mem8[SP];
+    }
+  }
+
+  instruction ld "rd, X" {
+    size 16
+    match 0xfe0f 0x900c
+    operand rd reg [8:4]
+    cycles 2
+    describe "Load through X"
+    exec {
+      rd = mem8[((r27 << 8) | r26)];
+    }
+  }
+
+  instruction st "X, rr" {
+    size 16
+    match 0xfe0f 0x920c
+    operand rr reg [8:4]
+    cycles 2
+    describe "Store through X"
+    exec {
+      mem8[((r27 << 8) | r26)] = rr;
+    }
+  }
+
+  instruction ld "rd, X+" {
+    size 16
+    match 0xfe0f 0x900d
+    operand rd reg [8:4]
+    cycles 2
+    describe "Load through X with post-increment"
+    exec {
+      a = ((r27 << 8) | r26);
+      rd = mem8[a];
+      p = a + 1;
+      r26 = p & 255;
+      r27 = (p >> 8) & 255;
+    }
+  }
+
+  instruction st "X+, rr" {
+    size 16
+    match 0xfe0f 0x920d
+    operand rr reg [8:4]
+    cycles 2
+    describe "Store through X with post-increment"
+    exec {
+      a = ((r27 << 8) | r26);
+      mem8[a] = rr;
+      p = a + 1;
+      r26 = p & 255;
+      r27 = (p >> 8) & 255;
+    }
+  }
+
+  instruction ld "rd, -X" {
+    size 16
+    match 0xfe0f 0x900e
+    operand rd reg [8:4]
+    cycles 2
+    describe "Load through X with pre-decrement"
+    exec {
+      p = ((r27 << 8) | r26) - 1;
+      r26 = p & 255;
+      r27 = (p >> 8) & 255;
+      rd = mem8[p & 65535];
+    }
+  }
+
+  instruction st "-X, rr" {
+    size 16
+    match 0xfe0f 0x920e
+    operand rr reg [8:4]
+    cycles 2
+    describe "Store through X with pre-decrement"
+    exec {
+      p = ((r27 << 8) | r26) - 1;
+      r26 = p & 255;
+      r27 = (p >> 8) & 255;
+      mem8[p & 65535] = rr;
+    }
+  }
+
+  instruction ld "rd, Y" {
+    size 16
+    match 0xfe0f 0x8008
+    operand rd reg [8:4]
+    cycles 2
+    describe "Load through Y"
+    exec {
+      rd = mem8[((r29 << 8) | r28)];
+    }
+  }
+
+  instruction st "Y, rr" {
+    size 16
+    match 0xfe0f 0x8208
+    operand rr reg [8:4]
+    cycles 2
+    describe "Store through Y"
+    exec {
+      mem8[((r29 << 8) | r28)] = rr;
+    }
+  }
+
+  instruction ld "rd, Y+" {
+    size 16
+    match 0xfe0f 0x9009
+    operand rd reg [8:4]
+    cycles 2
+    describe "Load through Y with post-increment"
+    exec {
+      a = ((r29 << 8) | r28);
+      rd = mem8[a];
+      p = a + 1;
+      r28 = p & 255;
+      r29 = (p >> 8) & 255;
+    }
+  }
+
+  instruction st "Y+, rr" {
+    size 16
+    match 0xfe0f 0x9209
+    operand rr reg [8:4]
+    cycles 2
+    describe "Store through Y with post-increment"
+    exec {
+      a = ((r29 << 8) | r28);
+      mem8[a] = rr;
+      p = a + 1;
+      r28 = p & 255;
+      r29 = (p >> 8) & 255;
+    }
+  }
+
+  instruction ld "rd, -Y" {
+    size 16
+    match 0xfe0f 0x900a
+    operand rd reg [8:4]
+    cycles 2
+    describe "Load through Y with pre-decrement"
+    exec {
+      p = ((r29 << 8) | r28) - 1;
+      r28 = p & 255;
+      r29 = (p >> 8) & 255;
+      rd = mem8[p & 65535];
+    }
+  }
+
+  instruction st "-Y, rr" {
+    size 16
+    match 0xfe0f 0x920a
+    operand rr reg [8:4]
+    cycles 2
+    describe "Store through Y with pre-decrement"
+    exec {
+      p = ((r29 << 8) | r28) - 1;
+      r28 = p & 255;
+      r29 = (p >> 8) & 255;
+      mem8[p & 65535] = rr;
+    }
+  }
+
+  instruction ld "rd, Z" {
+    size 16
+    match 0xfe0f 0x8000
+    operand rd reg [8:4]
+    cycles 2
+    describe "Load through Z"
+    exec {
+      rd = mem8[((r31 << 8) | r30)];
+    }
+  }
+
+  instruction st "Z, rr" {
+    size 16
+    match 0xfe0f 0x8200
+    operand rr reg [8:4]
+    cycles 2
+    describe "Store through Z"
+    exec {
+      mem8[((r31 << 8) | r30)] = rr;
+    }
+  }
+
+  instruction ld "rd, Z+" {
+    size 16
+    match 0xfe0f 0x9001
+    operand rd reg [8:4]
+    cycles 2
+    describe "Load through Z with post-increment"
+    exec {
+      a = ((r31 << 8) | r30);
+      rd = mem8[a];
+      p = a + 1;
+      r30 = p & 255;
+      r31 = (p >> 8) & 255;
+    }
+  }
+
+  instruction st "Z+, rr" {
+    size 16
+    match 0xfe0f 0x9201
+    operand rr reg [8:4]
+    cycles 2
+    describe "Store through Z with post-increment"
+    exec {
+      a = ((r31 << 8) | r30);
+      mem8[a] = rr;
+      p = a + 1;
+      r30 = p & 255;
+      r31 = (p >> 8) & 255;
+    }
+  }
+
+  instruction ld "rd, -Z" {
+    size 16
+    match 0xfe0f 0x9002
+    operand rd reg [8:4]
+    cycles 2
+    describe "Load through Z with pre-decrement"
+    exec {
+      p = ((r31 << 8) | r30) - 1;
+      r30 = p & 255;
+      r31 = (p >> 8) & 255;
+      rd = mem8[p & 65535];
+    }
+  }
+
+  instruction st "-Z, rr" {
+    size 16
+    match 0xfe0f 0x9202
+    operand rr reg [8:4]
+    cycles 2
+    describe "Store through Z with pre-decrement"
+    exec {
+      p = ((r31 << 8) | r30) - 1;
+      r30 = p & 255;
+      r31 = (p >> 8) & 255;
+      mem8[p & 65535] = rr;
+    }
+  }
+
+  instruction lds "rd, addr" {
+    size 32
+    match 0xfe0f 0x9000
+    operand rd reg [8:4]
+    operand addr imm [31:16]
+    cycles 2
+    describe "Load from a data address"
+    exec {
+      rd = mem8[addr];
+    }
+  }
+
+  instruction sts "addr, rr" {
+    size 32
+    match 0xfe0f 0x9200
+    operand rr reg [8:4]
+    operand addr imm [31:16]
+    cycles 2
+    describe "Store to a data address"
+    exec {
+      mem8[addr] = rr;
+    }
+  }
+
+  instruction in "rd, A" {
+    size 16
+    match 0xf800 0xb000
+    operand rd reg [8:4]
+    operand A imm [10:9,3:0]
+    describe "Read an I/O register (0x3F SREG, 0x3D/0x3E stack pointer)"
+    exec {
+      if (A == 63) {
+        rd = (I << 7) | (T << 6) | (H << 5) | (S << 4) | (V << 3) | (N << 2) | (Z << 1) | C;
+      } else if (A == 61) {
+        rd = SP & 255;
+      } else if (A == 62) {
+        rd = (SP >> 8) & 255;
+      } else {
+        rd = mem8[32 + A];
+      }
+    }
+  }
+
+  instruction out "A, rr" {
+    size 16
+    match 0xf800 0xb800
+    operand rr reg [8:4]
+    operand A imm [10:9,3:0]
+    describe "Write an I/O register. Simulator console: I/O 0x0C (UDR) prints rr as a character, 0x0D prints it as a number"
+    exec {
+      if (A == 63) {
+        I = bit(rr, 7);
+        T = bit(rr, 6);
+        H = bit(rr, 5);
+        S = bit(rr, 4);
+        V = bit(rr, 3);
+        N = bit(rr, 2);
+        Z = bit(rr, 1);
+        C = bit(rr, 0);
+      } else if (A == 61) {
+        SP = (SP & 65280) | rr;
+      } else if (A == 62) {
+        SP = (SP & 255) | (rr << 8);
+      } else if (A == 12) {
+        out("char", rr);
+      } else if (A == 13) {
+        out("uint", rr);
+      } else {
+        mem8[32 + A] = rr;
+      }
+    }
+  }
+
+  instruction rjmp "target" {
+    size 16
+    match 0xf000 0xc000
+    operand target pcrel s[11:0]<<1
+    cycles 2
+    base 2
+    describe "Relative jump"
+    exec {
+      pc = pc + 2 + target;
+    }
+  }
+
+  instruction rcall "target" {
+    size 16
+    match 0xf000 0xd000
+    operand target pcrel s[11:0]<<1
+    cycles 3
+    base 2
+    describe "Relative call"
+    exec {
+      t = next;
+      mem8[SP] = t & 255;
+      SP = SP - 1;
+      mem8[SP] = t >> 8;
+      SP = SP - 1;
+      pc = pc + 2 + target;
+    }
+  }
+
+  instruction jmp "target" {
+    size 32
+    match 0xfe0e 0x940c
+    operand target imm [8:4,0,31:16]<<1
+    cycles 3
+    describe "Absolute jump"
+    exec {
+      pc = target;
+    }
+  }
+
+  instruction call "target" {
+    size 32
+    match 0xfe0e 0x940e
+    operand target imm [8:4,0,31:16]<<1
+    cycles 4
+    describe "Absolute call"
+    exec {
+      t = next;
+      mem8[SP] = t & 255;
+      SP = SP - 1;
+      mem8[SP] = t >> 8;
+      SP = SP - 1;
+      pc = target;
+    }
+  }
+
+  instruction ret "" {
+    size 16
+    match 0xffff 0x9508
+    cycles 4
+    describe "Return from subroutine"
+    exec {
+      SP = SP + 1;
+      hi = mem8[SP];
+      SP = SP + 1;
+      lo = mem8[SP];
+      pc = (hi << 8) | lo;
+    }
+  }
+
+  instruction reti "" {
+    size 16
+    match 0xffff 0x9518
+    cycles 4
+    describe "Return from interrupt"
+    exec {
+      SP = SP + 1;
+      hi = mem8[SP];
+      SP = SP + 1;
+      lo = mem8[SP];
+      pc = (hi << 8) | lo;
+      I = 1;
+    }
+  }
+
+  instruction brcs "target" {
+    size 16
+    match 0xfc07 0xf000
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if carry set"
+    exec {
+      if (C) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction breq "target" {
+    size 16
+    match 0xfc07 0xf001
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if equal (zero set)"
+    exec {
+      if (Z) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brmi "target" {
+    size 16
+    match 0xfc07 0xf002
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if minus"
+    exec {
+      if (N) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brvs "target" {
+    size 16
+    match 0xfc07 0xf003
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if overflow set"
+    exec {
+      if (V) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brlt "target" {
+    size 16
+    match 0xfc07 0xf004
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if less than (signed)"
+    exec {
+      if (S) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brhs "target" {
+    size 16
+    match 0xfc07 0xf005
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if half-carry set"
+    exec {
+      if (H) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brts "target" {
+    size 16
+    match 0xfc07 0xf006
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if T set"
+    exec {
+      if (T) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brie "target" {
+    size 16
+    match 0xfc07 0xf007
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if interrupts enabled"
+    exec {
+      if (I) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brcc "target" {
+    size 16
+    match 0xfc07 0xf400
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if carry clear"
+    exec {
+      if (!C) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brne "target" {
+    size 16
+    match 0xfc07 0xf401
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if not equal (zero clear)"
+    exec {
+      if (!Z) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brpl "target" {
+    size 16
+    match 0xfc07 0xf402
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if plus"
+    exec {
+      if (!N) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brvc "target" {
+    size 16
+    match 0xfc07 0xf403
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if overflow clear"
+    exec {
+      if (!V) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brge "target" {
+    size 16
+    match 0xfc07 0xf404
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if greater or equal (signed)"
+    exec {
+      if (!S) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brhc "target" {
+    size 16
+    match 0xfc07 0xf405
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if half-carry clear"
+    exec {
+      if (!H) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brtc "target" {
+    size 16
+    match 0xfc07 0xf406
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if T clear"
+    exec {
+      if (!T) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brid "target" {
+    size 16
+    match 0xfc07 0xf407
+    operand target pcrel s[9:3]<<1
+    base 2
+    describe "Branch if interrupts disabled"
+    exec {
+      if (!I) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction sec "" {
+    size 16
+    match 0xffff 0x9408
+    describe "Set the C flag"
+    exec {
+      C = 1;
+    }
+  }
+
+  instruction clc "" {
+    size 16
+    match 0xffff 0x9488
+    describe "Clear the C flag"
+    exec {
+      C = 0;
+    }
+  }
+
+  instruction sez "" {
+    size 16
+    match 0xffff 0x9418
+    describe "Set the Z flag"
+    exec {
+      Z = 1;
+    }
+  }
+
+  instruction clz "" {
+    size 16
+    match 0xffff 0x9498
+    describe "Clear the Z flag"
+    exec {
+      Z = 0;
+    }
+  }
+
+  instruction sen "" {
+    size 16
+    match 0xffff 0x9428
+    describe "Set the N flag"
+    exec {
+      N = 1;
+    }
+  }
+
+  instruction cln "" {
+    size 16
+    match 0xffff 0x94a8
+    describe "Clear the N flag"
+    exec {
+      N = 0;
+    }
+  }
+
+  instruction sev "" {
+    size 16
+    match 0xffff 0x9438
+    describe "Set the V flag"
+    exec {
+      V = 1;
+    }
+  }
+
+  instruction clv "" {
+    size 16
+    match 0xffff 0x94b8
+    describe "Clear the V flag"
+    exec {
+      V = 0;
+    }
+  }
+
+  instruction ses "" {
+    size 16
+    match 0xffff 0x9448
+    describe "Set the S flag"
+    exec {
+      S = 1;
+    }
+  }
+
+  instruction cls "" {
+    size 16
+    match 0xffff 0x94c8
+    describe "Clear the S flag"
+    exec {
+      S = 0;
+    }
+  }
+
+  instruction seh "" {
+    size 16
+    match 0xffff 0x9458
+    describe "Set the H flag"
+    exec {
+      H = 1;
+    }
+  }
+
+  instruction clh "" {
+    size 16
+    match 0xffff 0x94d8
+    describe "Clear the H flag"
+    exec {
+      H = 0;
+    }
+  }
+
+  instruction set "" {
+    size 16
+    match 0xffff 0x9468
+    describe "Set the T flag"
+    exec {
+      T = 1;
+    }
+  }
+
+  instruction clt "" {
+    size 16
+    match 0xffff 0x94e8
+    describe "Clear the T flag"
+    exec {
+      T = 0;
+    }
+  }
+
+  instruction sei "" {
+    size 16
+    match 0xffff 0x9478
+    describe "Set the I flag"
+    exec {
+      I = 1;
+    }
+  }
+
+  instruction cli "" {
+    size 16
+    match 0xffff 0x94f8
+    describe "Clear the I flag"
+    exec {
+      I = 0;
+    }
+  }
+
+  instruction nop "" {
+    size 16
+    match 0xffff 0x0
+    describe "No operation"
+    exec {
+    }
+  }
+
+  instruction sleep "" {
+    size 16
+    match 0xffff 0x9588
+    describe "Sleep: stops the program in this simulator"
+    exec {
+      halt();
+    }
+  }
+
+  instruction break "" {
+    size 16
+    match 0xffff 0x9598
+    describe "Break: stops the program"
+    exec {
+      halt();
+    }
+  }
+
+  pseudo "clr rd" {
+    expand {
+      eor rd, rd
+    }
+  }
+
+  pseudo "lsl rd" {
+    expand {
+      add rd, rd
+    }
+  }
+
+  pseudo "rol rd" {
+    expand {
+      adc rd, rd
+    }
+  }
+
+  pseudo "tst rd" {
+    expand {
+      and rd, rd
+    }
+  }
+
+  pseudo "ser rd" {
+    expand {
+      ldi rd, 255
+    }
+  }
+
+  pseudo "sbr rd, imm" {
+    expand {
+      ori rd, imm
+    }
+  }
+
+  pseudo "brlo target" {
+    expand {
+      brcs target
+    }
+  }
+
+  pseudo "brsh target" {
+    expand {
+      brcc target
+    }
+  }
+
+  sample """
+    ; AVR (ATmega-style): add up a table through the X pointer and print the sum.
+    ; Simulator console: I/O 0x0C (UDR) prints a character, 0x0D prints a number.
+            .data
+    table:  .byte 3, 14, 15, 9, 26
+
+            .text
+    main:
+            ldi   r26, lo8(table)     ; X = r27:r26 = address of the table
+            ldi   r27, hi8(table)
+            clr   r18                 ; sum
+            ldi   r19, 5              ; count
+    loop:
+            ld    r20, X+             ; load, then X++
+            add   r18, r20            ; sets H S V N Z C
+            dec   r19
+            brne  loop                ; repeat until Z
+
+            mov   r24, r18
+            rcall show                ; call (return address goes on the stack)
+            ldi   r16, 10
+            out   0x0c, r16           ; newline
+            sleep
+
+    show:
+            out   0x0d, r24           ; print r24 as a number
+            ret
+  """
+}

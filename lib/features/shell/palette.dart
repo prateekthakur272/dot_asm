@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dot_asm/app/app_state.dart';
@@ -80,7 +82,101 @@ class _CommandPaletteState extends State<CommandPalette> {
       action();
     };
 
+    final project = state.activeProject;
     return [
+      _PaletteItem(
+        title: 'New Project',
+        subtitle: 'Pick an architecture and processor',
+        category: 'Actions',
+        icon: AppIcons.add,
+        action: run(() => state.modal = const ModalNewProject()),
+      ),
+      _PaletteItem(
+        title: 'Open Project…',
+        subtitle: 'Choose a project folder (contains project.dotasm)',
+        category: 'Actions',
+        icon: AppIcons.folder,
+        action: run(() => state.openProjectFromPicker()),
+      ),
+      _PaletteItem(
+        title: 'Processor Gallery',
+        subtitle: 'Browse famous processors by family and era',
+        category: 'Actions',
+        icon: Icons.collections_bookmark_outlined,
+        action: run(state.openGallery),
+      ),
+      if (project != null) ...[
+        _PaletteItem(
+          title: 'Processor Builder',
+          subtitle: 'Edit the processors of this project',
+          category: 'Actions',
+          icon: Icons.memory_rounded,
+          action: run(state.openBuilder),
+        ),
+        _PaletteItem(
+          title: 'New Processor',
+          subtitle: 'Design a processor in this project',
+          category: 'Actions',
+          icon: AppIcons.add,
+          action: run(state.newProcessor),
+        ),
+        _PaletteItem(
+          title: 'Assemble',
+          subtitle: 'Assemble the source and restart the processor',
+          category: 'Run',
+          icon: Icons.build_circle_outlined,
+          action: run(state.assembleNow),
+        ),
+        _PaletteItem(
+          title: state.sim.running ? 'Pause' : 'Run',
+          subtitle: 'Run the program until it stops or hits a breakpoint',
+          category: 'Run',
+          icon: state.sim.running
+              ? Icons.pause_rounded
+              : Icons.play_arrow_rounded,
+          action: run(
+            () => state.sim.running
+                ? state.sim.pause()
+                : unawaited(state.sim.run()),
+          ),
+        ),
+        _PaletteItem(
+          title: 'Step',
+          subtitle: 'Execute one instruction',
+          category: 'Run',
+          icon: Icons.skip_next_rounded,
+          action: run(state.sim.stepOnce),
+        ),
+        _PaletteItem(
+          title: 'Step Back',
+          subtitle: 'Undo the last instruction',
+          category: 'Run',
+          icon: Icons.undo_rounded,
+          action: run(state.sim.stepBack),
+        ),
+        _PaletteItem(
+          title: 'Reset Processor',
+          subtitle: 'Registers, flags and memory back to the start',
+          category: 'Run',
+          icon: Icons.restart_alt_rounded,
+          action: run(state.sim.reset),
+        ),
+        _PaletteItem(
+          title: 'Close Project',
+          subtitle: project.name,
+          category: 'Actions',
+          icon: AppIcons.close,
+          action: run(state.closeProject),
+        ),
+      ],
+      for (final pr in state.projects)
+        _PaletteItem(
+          title: 'Open ${pr.name}',
+          subtitle: state.processorFor(pr)?.name ?? '${pr.processor}',
+          category: 'Projects',
+          icon: Icons.memory_rounded,
+          action: run(() => state.openProject(pr.id)),
+        ),
       _PaletteItem(
         title: 'Open Preferences',
         subtitle: 'Change theme, open at login and view storage',

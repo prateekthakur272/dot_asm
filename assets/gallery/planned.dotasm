@@ -1,0 +1,48 @@
+# Processors on the roadmap. They are listed in the gallery but cannot be simulated yet.
+planned "ARM AArch64 (ARMv8-A)" {
+  vendor "Arm"
+  year 2011
+  era modern
+  tags RISC ARM 64-bit
+  describe "The 64-bit ARM architecture used in phones, Apple Silicon and servers."
+}
+
+planned "ARM Cortex-M (Thumb-2)" {
+  vendor "Arm"
+  year 2004
+  era modern
+  tags RISC ARM 32-bit Microcontroller
+  describe "The Thumb-2 instruction set of the microcontrollers inside countless embedded devices."
+}
+
+planned "Zilog Z80" {
+  vendor "Zilog"
+  year 1976
+  era legacy
+  tags CISC 8-bit
+  describe "The 8-bit processor of the ZX Spectrum and many arcade machines."
+}
+
+planned "Motorola 68000" {
+  vendor "Motorola"
+  year 1979
+  era legacy
+  tags CISC 32-bit
+  describe "The orthogonal CISC of the Amiga, Atari ST and early Macintosh."
+}
+
+planned "Intel 8051" {
+  vendor "Intel"
+  year 1980
+  era legacy
+  tags CISC 8-bit Microcontroller
+  describe "The long-lived 8-bit microcontroller with bit-addressable memory."
+}
+
+planned "PowerPC 750" {
+  vendor "IBM / Motorola"
+  year 1997
+  era legacy
+  tags RISC 32-bit
+  describe "The RISC design behind classic Macs and the GameCube."
+}

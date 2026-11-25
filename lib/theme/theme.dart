@@ -12,6 +12,7 @@ class Pal {
     required this.text,
     required this.muted,
     required this.accent,
+    required this.onAccent,
     required this.ok,
     required this.err,
     required this.warn,
@@ -28,6 +29,9 @@ class Pal {
   final Color text;
   final Color muted;
   final Color accent;
+
+  /// Text and icon colour on top of [accent] (primary buttons).
+  final Color onAccent;
   final Color ok;
   final Color err;
   final Color warn;
@@ -44,38 +48,41 @@ extension PalContext on BuildContext {
   Pal get pal => Pal.of(this);
 }
 
+/// Black and grey: near-black surfaces, neutral greys, a light-grey accent. Status colours stay muted but readable.
 const DarkPal = Pal(
   dark: true,
-  bg: Color(0xFF131417),
-  panel: Color(0xFF1C1E22),
-  sidebar: Color(0xFF1C1E22),
-  field: Color(0xFF16181B),
-  border: Color(0xFF2C2F36),
-  text: Color(0xFFE6E8EB),
-  muted: Color(0xFF8F96A3),
-  accent: Color(0xFF6C5CE7),
-  ok: Color(0xFF00B894),
-  err: Color(0xFFFF7675),
-  warn: Color(0xFFFDCB6E),
-  hover: Color(0xFF262930),
-  selected: Color(0xFF2D313A),
+  bg: Color(0xFF0A0A0A),
+  panel: Color(0xFF121212),
+  sidebar: Color(0xFF0F0F0F),
+  field: Color(0xFF0D0D0D),
+  border: Color(0xFF262626),
+  text: Color(0xFFE8E8E8),
+  muted: Color(0xFF8A8A8A),
+  accent: Color(0xFFD4D4D4),
+  onAccent: Color(0xFF0A0A0A),
+  ok: Color(0xFF8FBF9F),
+  err: Color(0xFFE07070),
+  warn: Color(0xFFD4B26A),
+  hover: Color(0xFF1C1C1C),
+  selected: Color(0xFF242424),
 );
 
 const LightPal = Pal(
   dark: false,
-  bg: Color(0xFFF4F6F9),
+  bg: Color(0xFFF2F2F2),
   panel: Color(0xFFFFFFFF),
-  sidebar: Color(0xFFFFFFFF),
+  sidebar: Color(0xFFF8F8F8),
   field: Color(0xFFFFFFFF),
-  border: Color(0xFFE2E5EB),
-  text: Color(0xFF1E2125),
-  muted: Color(0xFF6E7683),
-  accent: Color(0xFF5A4BD8),
-  ok: Color(0xFF00A381),
-  err: Color(0xFFE05655),
-  warn: Color(0xFFE5A638),
-  hover: Color(0xFFEEF1F6),
-  selected: Color(0xFFE4E8F0),
+  border: Color(0xFFDCDCDC),
+  text: Color(0xFF111111),
+  muted: Color(0xFF6B6B6B),
+  accent: Color(0xFF1F1F1F),
+  onAccent: Color(0xFFFFFFFF),
+  ok: Color(0xFF2E7D4F),
+  err: Color(0xFFC0392B),
+  warn: Color(0xFFA97C1F),
+  hover: Color(0xFFEBEBEB),
+  selected: Color(0xFFE0E0E0),
 );
 
 /// InheritedTheme so popups, tooltips, dialogs inherit the active palette.
@@ -118,7 +125,7 @@ class DotAsmTheme {
       tooltipTheme: TooltipThemeData(
         waitDuration: const Duration(milliseconds: 400),
         decoration: BoxDecoration(
-          color: dark ? const Color(0xFF2A2D35) : const Color(0xFF2A2D35),
+          color: dark ? const Color(0xFF262626) : const Color(0xFF1F1F1F),
           borderRadius: BorderRadius.circular(5),
           border: Border.all(color: p.border, width: 0.5),
         ),

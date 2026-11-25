@@ -1,0 +1,2346 @@
+# dot ASM processor definition. Edit here or in the processor builder.
+processor mos6502 "MOS Technology 6502" {
+  arch mos6502
+  vendor "MOS Technology"
+  year 1975
+  era legacy
+  tags CISC 8-bit MOS
+  describe "The 8-bit processor of the Apple II, Commodore 64, NES and Atari 2600: A, X, Y registers, a 256-byte stack in page 1, 13 addressing modes and 1-3 byte instructions. Decimal mode is not simulated. hlt/prn/prc/prs are simulator extras on unused opcodes."
+
+  word 16 little
+  fetch 8
+  hexprefix "$"
+  wordbytes 2
+  comments ";"
+
+  register A width 8 "Accumulator"
+  register X width 8 "Index register X"
+  register Y width 8 "Index register Y"
+  register SP width 8 "Stack pointer (stack is page 1: $0100-$01FF)"
+  flags N V D I Z C
+  init SP=0xff
+  reset 0x800
+  pipeline Fetch Decode Execute
+
+  memory {
+    ram     at 0x0 size 0x800 perms rw role data
+    program at 0x800 size 0xb800 perms rx role text
+  }
+
+  instruction adc "#imm" {
+    size 16
+    match 0xff 0x69
+    operand imm imm [15:8]
+    cycles 2
+    describe "Add with carry"
+    exec {
+      v = imm;
+      t = A + v + C;
+      res = t & 255;
+      C = bit(t, 8);
+      V = bit((A ^ res) & (v ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction adc "(zp,x)" {
+    size 16
+    match 0xff 0x61
+    operand zp imm [15:8]
+    cycles 6
+    describe "Add with carry"
+    exec {
+      p = (zp + X) & 255;
+      a = mem8[p] | (mem8[(p + 1) & 255] << 8);
+      v = mem8[a];
+      t = A + v + C;
+      res = t & 255;
+      C = bit(t, 8);
+      V = bit((A ^ res) & (v ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction adc "(zp),y" {
+    size 16
+    match 0xff 0x71
+    operand zp imm [15:8]
+    cycles 5
+    describe "Add with carry"
+    exec {
+      a = ((mem8[zp] | (mem8[(zp + 1) & 255] << 8)) + Y) & 65535;
+      v = mem8[a];
+      t = A + v + C;
+      res = t & 255;
+      C = bit(t, 8);
+      V = bit((A ^ res) & (v ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction adc "zp" {
+    size 16
+    match 0xff 0x65
+    operand zp imm [15:8]
+    cycles 3
+    describe "Add with carry"
+    exec {
+      a = zp;
+      v = mem8[a];
+      t = A + v + C;
+      res = t & 255;
+      C = bit(t, 8);
+      V = bit((A ^ res) & (v ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction adc "zp,x" {
+    size 16
+    match 0xff 0x75
+    operand zp imm [15:8]
+    cycles 4
+    describe "Add with carry"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      t = A + v + C;
+      res = t & 255;
+      C = bit(t, 8);
+      V = bit((A ^ res) & (v ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction adc "addr" {
+    size 24
+    match 0xff 0x6d
+    operand addr imm [23:8]
+    cycles 4
+    describe "Add with carry"
+    exec {
+      a = addr;
+      v = mem8[a];
+      t = A + v + C;
+      res = t & 255;
+      C = bit(t, 8);
+      V = bit((A ^ res) & (v ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction adc "addr,x" {
+    size 24
+    match 0xff 0x7d
+    operand addr imm [23:8]
+    cycles 4
+    describe "Add with carry"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      t = A + v + C;
+      res = t & 255;
+      C = bit(t, 8);
+      V = bit((A ^ res) & (v ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction adc "addr,y" {
+    size 24
+    match 0xff 0x79
+    operand addr imm [23:8]
+    cycles 4
+    describe "Add with carry"
+    exec {
+      a = (addr + Y) & 65535;
+      v = mem8[a];
+      t = A + v + C;
+      res = t & 255;
+      C = bit(t, 8);
+      V = bit((A ^ res) & (v ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction and "#imm" {
+    size 16
+    match 0xff 0x29
+    operand imm imm [15:8]
+    cycles 2
+    describe "Bitwise and with A"
+    exec {
+      v = imm;
+      A = A & v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction and "(zp,x)" {
+    size 16
+    match 0xff 0x21
+    operand zp imm [15:8]
+    cycles 6
+    describe "Bitwise and with A"
+    exec {
+      p = (zp + X) & 255;
+      a = mem8[p] | (mem8[(p + 1) & 255] << 8);
+      v = mem8[a];
+      A = A & v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction and "(zp),y" {
+    size 16
+    match 0xff 0x31
+    operand zp imm [15:8]
+    cycles 5
+    describe "Bitwise and with A"
+    exec {
+      a = ((mem8[zp] | (mem8[(zp + 1) & 255] << 8)) + Y) & 65535;
+      v = mem8[a];
+      A = A & v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction and "zp" {
+    size 16
+    match 0xff 0x25
+    operand zp imm [15:8]
+    cycles 3
+    describe "Bitwise and with A"
+    exec {
+      a = zp;
+      v = mem8[a];
+      A = A & v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction and "zp,x" {
+    size 16
+    match 0xff 0x35
+    operand zp imm [15:8]
+    cycles 4
+    describe "Bitwise and with A"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      A = A & v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction and "addr" {
+    size 24
+    match 0xff 0x2d
+    operand addr imm [23:8]
+    cycles 4
+    describe "Bitwise and with A"
+    exec {
+      a = addr;
+      v = mem8[a];
+      A = A & v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction and "addr,x" {
+    size 24
+    match 0xff 0x3d
+    operand addr imm [23:8]
+    cycles 4
+    describe "Bitwise and with A"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      A = A & v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction and "addr,y" {
+    size 24
+    match 0xff 0x39
+    operand addr imm [23:8]
+    cycles 4
+    describe "Bitwise and with A"
+    exec {
+      a = (addr + Y) & 65535;
+      v = mem8[a];
+      A = A & v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction asl "a" {
+    size 8
+    match 0xff 0xa
+    cycles 2
+    describe "Arithmetic shift left"
+    exec {
+      v = A;
+      C = bit(v, 7);
+      res = (v << 1) & 255;
+      A = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction asl "zp" {
+    size 16
+    match 0xff 0x6
+    operand zp imm [15:8]
+    cycles 5
+    describe "Arithmetic shift left"
+    exec {
+      a = zp;
+      v = mem8[a];
+      C = bit(v, 7);
+      res = (v << 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction asl "zp,x" {
+    size 16
+    match 0xff 0x16
+    operand zp imm [15:8]
+    cycles 6
+    describe "Arithmetic shift left"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      C = bit(v, 7);
+      res = (v << 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction asl "addr" {
+    size 24
+    match 0xff 0xe
+    operand addr imm [23:8]
+    cycles 6
+    describe "Arithmetic shift left"
+    exec {
+      a = addr;
+      v = mem8[a];
+      C = bit(v, 7);
+      res = (v << 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction asl "addr,x" {
+    size 24
+    match 0xff 0x1e
+    operand addr imm [23:8]
+    cycles 6
+    describe "Arithmetic shift left"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      C = bit(v, 7);
+      res = (v << 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction bcc "target" {
+    size 16
+    match 0xff 0x90
+    operand target pcrel s[15:8]
+    cycles 2
+    base 2
+    describe "Branch if carry clear"
+    exec {
+      if (!C) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction bcs "target" {
+    size 16
+    match 0xff 0xb0
+    operand target pcrel s[15:8]
+    cycles 2
+    base 2
+    describe "Branch if carry set"
+    exec {
+      if (C) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction beq "target" {
+    size 16
+    match 0xff 0xf0
+    operand target pcrel s[15:8]
+    cycles 2
+    base 2
+    describe "Branch if equal (zero set)"
+    exec {
+      if (Z) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction bit "zp" {
+    size 16
+    match 0xff 0x24
+    operand zp imm [15:8]
+    cycles 3
+    describe "Test bits: Z = (A & M) == 0, N and V copied from M"
+    exec {
+      a = zp;
+      v = mem8[a];
+      Z = (A & v) == 0;
+      N = bit(v, 7);
+      V = bit(v, 6);
+    }
+  }
+
+  instruction bit "addr" {
+    size 24
+    match 0xff 0x2c
+    operand addr imm [23:8]
+    cycles 4
+    describe "Test bits: Z = (A & M) == 0, N and V copied from M"
+    exec {
+      a = addr;
+      v = mem8[a];
+      Z = (A & v) == 0;
+      N = bit(v, 7);
+      V = bit(v, 6);
+    }
+  }
+
+  instruction bmi "target" {
+    size 16
+    match 0xff 0x30
+    operand target pcrel s[15:8]
+    cycles 2
+    base 2
+    describe "Branch if minus"
+    exec {
+      if (N) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction bne "target" {
+    size 16
+    match 0xff 0xd0
+    operand target pcrel s[15:8]
+    cycles 2
+    base 2
+    describe "Branch if not equal (zero clear)"
+    exec {
+      if (!Z) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction bpl "target" {
+    size 16
+    match 0xff 0x10
+    operand target pcrel s[15:8]
+    cycles 2
+    base 2
+    describe "Branch if plus"
+    exec {
+      if (!N) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction brk "" {
+    size 8
+    match 0xff 0x0
+    cycles 2
+    describe "Break: stops the program in this simulator"
+    exec {
+      halt();
+    }
+  }
+
+  instruction bvc "target" {
+    size 16
+    match 0xff 0x50
+    operand target pcrel s[15:8]
+    cycles 2
+    base 2
+    describe "Branch if overflow clear"
+    exec {
+      if (!V) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction bvs "target" {
+    size 16
+    match 0xff 0x70
+    operand target pcrel s[15:8]
+    cycles 2
+    base 2
+    describe "Branch if overflow set"
+    exec {
+      if (V) {
+        pc = pc + 2 + target;
+      }
+    }
+  }
+
+  instruction clc "" {
+    size 8
+    match 0xff 0x18
+    cycles 2
+    describe "Clear carry"
+    exec {
+      C = 0;
+    }
+  }
+
+  instruction cld "" {
+    size 8
+    match 0xff 0xd8
+    cycles 2
+    describe "Clear decimal flag (decimal mode is not simulated)"
+    exec {
+      D = 0;
+    }
+  }
+
+  instruction cli "" {
+    size 8
+    match 0xff 0x58
+    cycles 2
+    describe "Clear interrupt disable"
+    exec {
+      I = 0;
+    }
+  }
+
+  instruction clv "" {
+    size 8
+    match 0xff 0xb8
+    cycles 2
+    describe "Clear overflow"
+    exec {
+      V = 0;
+    }
+  }
+
+  instruction cmp "#imm" {
+    size 16
+    match 0xff 0xc9
+    operand imm imm [15:8]
+    cycles 2
+    describe "Compare A with memory"
+    exec {
+      v = imm;
+      t = A - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cmp "(zp,x)" {
+    size 16
+    match 0xff 0xc1
+    operand zp imm [15:8]
+    cycles 6
+    describe "Compare A with memory"
+    exec {
+      p = (zp + X) & 255;
+      a = mem8[p] | (mem8[(p + 1) & 255] << 8);
+      v = mem8[a];
+      t = A - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cmp "(zp),y" {
+    size 16
+    match 0xff 0xd1
+    operand zp imm [15:8]
+    cycles 5
+    describe "Compare A with memory"
+    exec {
+      a = ((mem8[zp] | (mem8[(zp + 1) & 255] << 8)) + Y) & 65535;
+      v = mem8[a];
+      t = A - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cmp "zp" {
+    size 16
+    match 0xff 0xc5
+    operand zp imm [15:8]
+    cycles 3
+    describe "Compare A with memory"
+    exec {
+      a = zp;
+      v = mem8[a];
+      t = A - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cmp "zp,x" {
+    size 16
+    match 0xff 0xd5
+    operand zp imm [15:8]
+    cycles 4
+    describe "Compare A with memory"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      t = A - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cmp "addr" {
+    size 24
+    match 0xff 0xcd
+    operand addr imm [23:8]
+    cycles 4
+    describe "Compare A with memory"
+    exec {
+      a = addr;
+      v = mem8[a];
+      t = A - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cmp "addr,x" {
+    size 24
+    match 0xff 0xdd
+    operand addr imm [23:8]
+    cycles 4
+    describe "Compare A with memory"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      t = A - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cmp "addr,y" {
+    size 24
+    match 0xff 0xd9
+    operand addr imm [23:8]
+    cycles 4
+    describe "Compare A with memory"
+    exec {
+      a = (addr + Y) & 65535;
+      v = mem8[a];
+      t = A - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cpx "#imm" {
+    size 16
+    match 0xff 0xe0
+    operand imm imm [15:8]
+    cycles 2
+    describe "Compare X with memory"
+    exec {
+      v = imm;
+      t = X - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cpx "zp" {
+    size 16
+    match 0xff 0xe4
+    operand zp imm [15:8]
+    cycles 3
+    describe "Compare X with memory"
+    exec {
+      a = zp;
+      v = mem8[a];
+      t = X - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cpx "addr" {
+    size 24
+    match 0xff 0xec
+    operand addr imm [23:8]
+    cycles 4
+    describe "Compare X with memory"
+    exec {
+      a = addr;
+      v = mem8[a];
+      t = X - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cpy "#imm" {
+    size 16
+    match 0xff 0xc0
+    operand imm imm [15:8]
+    cycles 2
+    describe "Compare Y with memory"
+    exec {
+      v = imm;
+      t = Y - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cpy "zp" {
+    size 16
+    match 0xff 0xc4
+    operand zp imm [15:8]
+    cycles 3
+    describe "Compare Y with memory"
+    exec {
+      a = zp;
+      v = mem8[a];
+      t = Y - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction cpy "addr" {
+    size 24
+    match 0xff 0xcc
+    operand addr imm [23:8]
+    cycles 4
+    describe "Compare Y with memory"
+    exec {
+      a = addr;
+      v = mem8[a];
+      t = Y - v;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction dec "zp" {
+    size 16
+    match 0xff 0xc6
+    operand zp imm [15:8]
+    cycles 5
+    describe "Decrement memory"
+    exec {
+      a = zp;
+      v = mem8[a];
+      res = (v - 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction dec "zp,x" {
+    size 16
+    match 0xff 0xd6
+    operand zp imm [15:8]
+    cycles 6
+    describe "Decrement memory"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      res = (v - 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction dec "addr" {
+    size 24
+    match 0xff 0xce
+    operand addr imm [23:8]
+    cycles 6
+    describe "Decrement memory"
+    exec {
+      a = addr;
+      v = mem8[a];
+      res = (v - 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction dec "addr,x" {
+    size 24
+    match 0xff 0xde
+    operand addr imm [23:8]
+    cycles 6
+    describe "Decrement memory"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      res = (v - 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction dex "" {
+    size 8
+    match 0xff 0xca
+    cycles 2
+    describe "Decrement X"
+    exec {
+      X = (X - 1) & 255;
+      N = bit(X, 7);
+      Z = X == 0;
+    }
+  }
+
+  instruction dey "" {
+    size 8
+    match 0xff 0x88
+    cycles 2
+    describe "Decrement Y"
+    exec {
+      Y = (Y - 1) & 255;
+      N = bit(Y, 7);
+      Z = Y == 0;
+    }
+  }
+
+  instruction eor "#imm" {
+    size 16
+    match 0xff 0x49
+    operand imm imm [15:8]
+    cycles 2
+    describe "Bitwise exclusive or with A"
+    exec {
+      v = imm;
+      A = A ^ v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction eor "(zp,x)" {
+    size 16
+    match 0xff 0x41
+    operand zp imm [15:8]
+    cycles 6
+    describe "Bitwise exclusive or with A"
+    exec {
+      p = (zp + X) & 255;
+      a = mem8[p] | (mem8[(p + 1) & 255] << 8);
+      v = mem8[a];
+      A = A ^ v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction eor "(zp),y" {
+    size 16
+    match 0xff 0x51
+    operand zp imm [15:8]
+    cycles 5
+    describe "Bitwise exclusive or with A"
+    exec {
+      a = ((mem8[zp] | (mem8[(zp + 1) & 255] << 8)) + Y) & 65535;
+      v = mem8[a];
+      A = A ^ v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction eor "zp" {
+    size 16
+    match 0xff 0x45
+    operand zp imm [15:8]
+    cycles 3
+    describe "Bitwise exclusive or with A"
+    exec {
+      a = zp;
+      v = mem8[a];
+      A = A ^ v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction eor "zp,x" {
+    size 16
+    match 0xff 0x55
+    operand zp imm [15:8]
+    cycles 4
+    describe "Bitwise exclusive or with A"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      A = A ^ v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction eor "addr" {
+    size 24
+    match 0xff 0x4d
+    operand addr imm [23:8]
+    cycles 4
+    describe "Bitwise exclusive or with A"
+    exec {
+      a = addr;
+      v = mem8[a];
+      A = A ^ v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction eor "addr,x" {
+    size 24
+    match 0xff 0x5d
+    operand addr imm [23:8]
+    cycles 4
+    describe "Bitwise exclusive or with A"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      A = A ^ v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction eor "addr,y" {
+    size 24
+    match 0xff 0x59
+    operand addr imm [23:8]
+    cycles 4
+    describe "Bitwise exclusive or with A"
+    exec {
+      a = (addr + Y) & 65535;
+      v = mem8[a];
+      A = A ^ v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction hlt "" {
+    size 8
+    match 0xff 0x2
+    cycles 2
+    describe "Simulator extension (unused KIL opcode): stop the program"
+    exec {
+      halt();
+    }
+  }
+
+  instruction inc "zp" {
+    size 16
+    match 0xff 0xe6
+    operand zp imm [15:8]
+    cycles 5
+    describe "Increment memory"
+    exec {
+      a = zp;
+      v = mem8[a];
+      res = (v + 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction inc "zp,x" {
+    size 16
+    match 0xff 0xf6
+    operand zp imm [15:8]
+    cycles 6
+    describe "Increment memory"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      res = (v + 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction inc "addr" {
+    size 24
+    match 0xff 0xee
+    operand addr imm [23:8]
+    cycles 6
+    describe "Increment memory"
+    exec {
+      a = addr;
+      v = mem8[a];
+      res = (v + 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction inc "addr,x" {
+    size 24
+    match 0xff 0xfe
+    operand addr imm [23:8]
+    cycles 6
+    describe "Increment memory"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      res = (v + 1) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction inx "" {
+    size 8
+    match 0xff 0xe8
+    cycles 2
+    describe "Increment X"
+    exec {
+      X = (X + 1) & 255;
+      N = bit(X, 7);
+      Z = X == 0;
+    }
+  }
+
+  instruction iny "" {
+    size 8
+    match 0xff 0xc8
+    cycles 2
+    describe "Increment Y"
+    exec {
+      Y = (Y + 1) & 255;
+      N = bit(Y, 7);
+      Z = Y == 0;
+    }
+  }
+
+  instruction jmp "(addr)" {
+    size 24
+    match 0xff 0x6c
+    operand addr imm [23:8]
+    cycles 5
+    describe "Jump indirect (with the original page-wrap behaviour)"
+    exec {
+      pc = mem8[addr] | (mem8[(addr & 65280) | ((addr + 1) & 255)] << 8);
+    }
+  }
+
+  instruction jmp "addr" {
+    size 24
+    match 0xff 0x4c
+    operand addr imm [23:8]
+    cycles 4
+    describe "Jump"
+    exec {
+      pc = addr;
+    }
+  }
+
+  instruction jsr "addr" {
+    size 24
+    match 0xff 0x20
+    operand addr imm [23:8]
+    cycles 6
+    describe "Jump to subroutine"
+    exec {
+      t = next - 1;
+      mem8[256 + SP] = t >> 8;
+      SP = SP - 1;
+      mem8[256 + SP] = t & 255;
+      SP = SP - 1;
+      pc = addr;
+    }
+  }
+
+  instruction lda "#imm" {
+    size 16
+    match 0xff 0xa9
+    operand imm imm [15:8]
+    cycles 2
+    describe "Load A"
+    exec {
+      v = imm;
+      A = v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction lda "(zp,x)" {
+    size 16
+    match 0xff 0xa1
+    operand zp imm [15:8]
+    cycles 6
+    describe "Load A"
+    exec {
+      p = (zp + X) & 255;
+      a = mem8[p] | (mem8[(p + 1) & 255] << 8);
+      v = mem8[a];
+      A = v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction lda "(zp),y" {
+    size 16
+    match 0xff 0xb1
+    operand zp imm [15:8]
+    cycles 5
+    describe "Load A"
+    exec {
+      a = ((mem8[zp] | (mem8[(zp + 1) & 255] << 8)) + Y) & 65535;
+      v = mem8[a];
+      A = v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction lda "zp" {
+    size 16
+    match 0xff 0xa5
+    operand zp imm [15:8]
+    cycles 3
+    describe "Load A"
+    exec {
+      a = zp;
+      v = mem8[a];
+      A = v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction lda "zp,x" {
+    size 16
+    match 0xff 0xb5
+    operand zp imm [15:8]
+    cycles 4
+    describe "Load A"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      A = v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction lda "addr" {
+    size 24
+    match 0xff 0xad
+    operand addr imm [23:8]
+    cycles 4
+    describe "Load A"
+    exec {
+      a = addr;
+      v = mem8[a];
+      A = v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction lda "addr,x" {
+    size 24
+    match 0xff 0xbd
+    operand addr imm [23:8]
+    cycles 4
+    describe "Load A"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      A = v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction lda "addr,y" {
+    size 24
+    match 0xff 0xb9
+    operand addr imm [23:8]
+    cycles 4
+    describe "Load A"
+    exec {
+      a = (addr + Y) & 65535;
+      v = mem8[a];
+      A = v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction ldx "#imm" {
+    size 16
+    match 0xff 0xa2
+    operand imm imm [15:8]
+    cycles 2
+    describe "Load X"
+    exec {
+      v = imm;
+      X = v;
+      N = bit(X, 7);
+      Z = X == 0;
+    }
+  }
+
+  instruction ldx "zp" {
+    size 16
+    match 0xff 0xa6
+    operand zp imm [15:8]
+    cycles 3
+    describe "Load X"
+    exec {
+      a = zp;
+      v = mem8[a];
+      X = v;
+      N = bit(X, 7);
+      Z = X == 0;
+    }
+  }
+
+  instruction ldx "zp,y" {
+    size 16
+    match 0xff 0xb6
+    operand zp imm [15:8]
+    cycles 4
+    describe "Load X"
+    exec {
+      a = (zp + Y) & 255;
+      v = mem8[a];
+      X = v;
+      N = bit(X, 7);
+      Z = X == 0;
+    }
+  }
+
+  instruction ldx "addr" {
+    size 24
+    match 0xff 0xae
+    operand addr imm [23:8]
+    cycles 4
+    describe "Load X"
+    exec {
+      a = addr;
+      v = mem8[a];
+      X = v;
+      N = bit(X, 7);
+      Z = X == 0;
+    }
+  }
+
+  instruction ldx "addr,y" {
+    size 24
+    match 0xff 0xbe
+    operand addr imm [23:8]
+    cycles 4
+    describe "Load X"
+    exec {
+      a = (addr + Y) & 65535;
+      v = mem8[a];
+      X = v;
+      N = bit(X, 7);
+      Z = X == 0;
+    }
+  }
+
+  instruction ldy "#imm" {
+    size 16
+    match 0xff 0xa0
+    operand imm imm [15:8]
+    cycles 2
+    describe "Load Y"
+    exec {
+      v = imm;
+      Y = v;
+      N = bit(Y, 7);
+      Z = Y == 0;
+    }
+  }
+
+  instruction ldy "zp" {
+    size 16
+    match 0xff 0xa4
+    operand zp imm [15:8]
+    cycles 3
+    describe "Load Y"
+    exec {
+      a = zp;
+      v = mem8[a];
+      Y = v;
+      N = bit(Y, 7);
+      Z = Y == 0;
+    }
+  }
+
+  instruction ldy "zp,x" {
+    size 16
+    match 0xff 0xb4
+    operand zp imm [15:8]
+    cycles 4
+    describe "Load Y"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      Y = v;
+      N = bit(Y, 7);
+      Z = Y == 0;
+    }
+  }
+
+  instruction ldy "addr" {
+    size 24
+    match 0xff 0xac
+    operand addr imm [23:8]
+    cycles 4
+    describe "Load Y"
+    exec {
+      a = addr;
+      v = mem8[a];
+      Y = v;
+      N = bit(Y, 7);
+      Z = Y == 0;
+    }
+  }
+
+  instruction ldy "addr,x" {
+    size 24
+    match 0xff 0xbc
+    operand addr imm [23:8]
+    cycles 4
+    describe "Load Y"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      Y = v;
+      N = bit(Y, 7);
+      Z = Y == 0;
+    }
+  }
+
+  instruction lsr "a" {
+    size 8
+    match 0xff 0x4a
+    cycles 2
+    describe "Logical shift right"
+    exec {
+      v = A;
+      C = bit(v, 0);
+      res = v >> 1;
+      A = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction lsr "zp" {
+    size 16
+    match 0xff 0x46
+    operand zp imm [15:8]
+    cycles 5
+    describe "Logical shift right"
+    exec {
+      a = zp;
+      v = mem8[a];
+      C = bit(v, 0);
+      res = v >> 1;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction lsr "zp,x" {
+    size 16
+    match 0xff 0x56
+    operand zp imm [15:8]
+    cycles 6
+    describe "Logical shift right"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      C = bit(v, 0);
+      res = v >> 1;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction lsr "addr" {
+    size 24
+    match 0xff 0x4e
+    operand addr imm [23:8]
+    cycles 6
+    describe "Logical shift right"
+    exec {
+      a = addr;
+      v = mem8[a];
+      C = bit(v, 0);
+      res = v >> 1;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction lsr "addr,x" {
+    size 24
+    match 0xff 0x5e
+    operand addr imm [23:8]
+    cycles 6
+    describe "Logical shift right"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      C = bit(v, 0);
+      res = v >> 1;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction nop "" {
+    size 8
+    match 0xff 0xea
+    cycles 2
+    describe "No operation"
+    exec {
+    }
+  }
+
+  instruction ora "#imm" {
+    size 16
+    match 0xff 0x9
+    operand imm imm [15:8]
+    cycles 2
+    describe "Bitwise or with A"
+    exec {
+      v = imm;
+      A = A | v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction ora "(zp,x)" {
+    size 16
+    match 0xff 0x1
+    operand zp imm [15:8]
+    cycles 6
+    describe "Bitwise or with A"
+    exec {
+      p = (zp + X) & 255;
+      a = mem8[p] | (mem8[(p + 1) & 255] << 8);
+      v = mem8[a];
+      A = A | v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction ora "(zp),y" {
+    size 16
+    match 0xff 0x11
+    operand zp imm [15:8]
+    cycles 5
+    describe "Bitwise or with A"
+    exec {
+      a = ((mem8[zp] | (mem8[(zp + 1) & 255] << 8)) + Y) & 65535;
+      v = mem8[a];
+      A = A | v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction ora "zp" {
+    size 16
+    match 0xff 0x5
+    operand zp imm [15:8]
+    cycles 3
+    describe "Bitwise or with A"
+    exec {
+      a = zp;
+      v = mem8[a];
+      A = A | v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction ora "zp,x" {
+    size 16
+    match 0xff 0x15
+    operand zp imm [15:8]
+    cycles 4
+    describe "Bitwise or with A"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      A = A | v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction ora "addr" {
+    size 24
+    match 0xff 0xd
+    operand addr imm [23:8]
+    cycles 4
+    describe "Bitwise or with A"
+    exec {
+      a = addr;
+      v = mem8[a];
+      A = A | v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction ora "addr,x" {
+    size 24
+    match 0xff 0x1d
+    operand addr imm [23:8]
+    cycles 4
+    describe "Bitwise or with A"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      A = A | v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction ora "addr,y" {
+    size 24
+    match 0xff 0x19
+    operand addr imm [23:8]
+    cycles 4
+    describe "Bitwise or with A"
+    exec {
+      a = (addr + Y) & 65535;
+      v = mem8[a];
+      A = A | v;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction pha "" {
+    size 8
+    match 0xff 0x48
+    cycles 2
+    describe "Push A"
+    exec {
+      mem8[256 + SP] = A;
+      SP = SP - 1;
+    }
+  }
+
+  instruction php "" {
+    size 8
+    match 0xff 0x8
+    cycles 2
+    describe "Push the status flags"
+    exec {
+      mem8[256 + SP] = (N << 7) | (V << 6) | 48 | (D << 3) | (I << 2) | (Z << 1) | C;
+      SP = SP - 1;
+    }
+  }
+
+  instruction pla "" {
+    size 8
+    match 0xff 0x68
+    cycles 2
+    describe "Pull A"
+    exec {
+      SP = SP + 1;
+      A = mem8[256 + SP];
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction plp "" {
+    size 8
+    match 0xff 0x28
+    cycles 2
+    describe "Pull the status flags"
+    exec {
+      SP = SP + 1;
+      v = mem8[256 + SP];
+      N = bit(v, 7);
+      V = bit(v, 6);
+      D = bit(v, 3);
+      I = bit(v, 2);
+      Z = bit(v, 1);
+      C = bit(v, 0);
+    }
+  }
+
+  instruction prc "" {
+    size 8
+    match 0xff 0x22
+    cycles 2
+    describe "Simulator extension: print A as a character"
+    exec {
+      out("char", A);
+    }
+  }
+
+  instruction prn "" {
+    size 8
+    match 0xff 0x12
+    cycles 2
+    describe "Simulator extension: print A as a decimal number"
+    exec {
+      out("int", A);
+    }
+  }
+
+  instruction prs "addr" {
+    size 24
+    match 0xff 0x32
+    operand addr imm [23:8]
+    cycles 4
+    describe "Simulator extension: print the zero-terminated string at addr"
+    exec {
+      out("str", addr);
+    }
+  }
+
+  instruction rol "a" {
+    size 8
+    match 0xff 0x2a
+    cycles 2
+    describe "Rotate left through carry"
+    exec {
+      v = A;
+      c = C;
+      C = bit(v, 7);
+      res = ((v << 1) | c) & 255;
+      A = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction rol "zp" {
+    size 16
+    match 0xff 0x26
+    operand zp imm [15:8]
+    cycles 5
+    describe "Rotate left through carry"
+    exec {
+      a = zp;
+      v = mem8[a];
+      c = C;
+      C = bit(v, 7);
+      res = ((v << 1) | c) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction rol "zp,x" {
+    size 16
+    match 0xff 0x36
+    operand zp imm [15:8]
+    cycles 6
+    describe "Rotate left through carry"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      c = C;
+      C = bit(v, 7);
+      res = ((v << 1) | c) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction rol "addr" {
+    size 24
+    match 0xff 0x2e
+    operand addr imm [23:8]
+    cycles 6
+    describe "Rotate left through carry"
+    exec {
+      a = addr;
+      v = mem8[a];
+      c = C;
+      C = bit(v, 7);
+      res = ((v << 1) | c) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction rol "addr,x" {
+    size 24
+    match 0xff 0x3e
+    operand addr imm [23:8]
+    cycles 6
+    describe "Rotate left through carry"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      c = C;
+      C = bit(v, 7);
+      res = ((v << 1) | c) & 255;
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction ror "a" {
+    size 8
+    match 0xff 0x6a
+    cycles 2
+    describe "Rotate right through carry"
+    exec {
+      v = A;
+      c = C;
+      C = bit(v, 0);
+      res = (v >> 1) | (c << 7);
+      A = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction ror "zp" {
+    size 16
+    match 0xff 0x66
+    operand zp imm [15:8]
+    cycles 5
+    describe "Rotate right through carry"
+    exec {
+      a = zp;
+      v = mem8[a];
+      c = C;
+      C = bit(v, 0);
+      res = (v >> 1) | (c << 7);
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction ror "zp,x" {
+    size 16
+    match 0xff 0x76
+    operand zp imm [15:8]
+    cycles 6
+    describe "Rotate right through carry"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      c = C;
+      C = bit(v, 0);
+      res = (v >> 1) | (c << 7);
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction ror "addr" {
+    size 24
+    match 0xff 0x6e
+    operand addr imm [23:8]
+    cycles 6
+    describe "Rotate right through carry"
+    exec {
+      a = addr;
+      v = mem8[a];
+      c = C;
+      C = bit(v, 0);
+      res = (v >> 1) | (c << 7);
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction ror "addr,x" {
+    size 24
+    match 0xff 0x7e
+    operand addr imm [23:8]
+    cycles 6
+    describe "Rotate right through carry"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      c = C;
+      C = bit(v, 0);
+      res = (v >> 1) | (c << 7);
+      mem8[a] = res;
+      N = bit(res, 7);
+      Z = res == 0;
+    }
+  }
+
+  instruction rts "" {
+    size 8
+    match 0xff 0x60
+    cycles 2
+    describe "Return from subroutine"
+    exec {
+      SP = SP + 1;
+      lo = mem8[256 + SP];
+      SP = SP + 1;
+      hi = mem8[256 + SP];
+      pc = ((hi << 8) | lo) + 1;
+    }
+  }
+
+  instruction sbc "#imm" {
+    size 16
+    match 0xff 0xe9
+    operand imm imm [15:8]
+    cycles 2
+    describe "Subtract with carry (borrow)"
+    exec {
+      v = imm;
+      t = A - v - 1 + C;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      V = bit((A ^ v) & (A ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction sbc "(zp,x)" {
+    size 16
+    match 0xff 0xe1
+    operand zp imm [15:8]
+    cycles 6
+    describe "Subtract with carry (borrow)"
+    exec {
+      p = (zp + X) & 255;
+      a = mem8[p] | (mem8[(p + 1) & 255] << 8);
+      v = mem8[a];
+      t = A - v - 1 + C;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      V = bit((A ^ v) & (A ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction sbc "(zp),y" {
+    size 16
+    match 0xff 0xf1
+    operand zp imm [15:8]
+    cycles 5
+    describe "Subtract with carry (borrow)"
+    exec {
+      a = ((mem8[zp] | (mem8[(zp + 1) & 255] << 8)) + Y) & 65535;
+      v = mem8[a];
+      t = A - v - 1 + C;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      V = bit((A ^ v) & (A ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction sbc "zp" {
+    size 16
+    match 0xff 0xe5
+    operand zp imm [15:8]
+    cycles 3
+    describe "Subtract with carry (borrow)"
+    exec {
+      a = zp;
+      v = mem8[a];
+      t = A - v - 1 + C;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      V = bit((A ^ v) & (A ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction sbc "zp,x" {
+    size 16
+    match 0xff 0xf5
+    operand zp imm [15:8]
+    cycles 4
+    describe "Subtract with carry (borrow)"
+    exec {
+      a = (zp + X) & 255;
+      v = mem8[a];
+      t = A - v - 1 + C;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      V = bit((A ^ v) & (A ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction sbc "addr" {
+    size 24
+    match 0xff 0xed
+    operand addr imm [23:8]
+    cycles 4
+    describe "Subtract with carry (borrow)"
+    exec {
+      a = addr;
+      v = mem8[a];
+      t = A - v - 1 + C;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      V = bit((A ^ v) & (A ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction sbc "addr,x" {
+    size 24
+    match 0xff 0xfd
+    operand addr imm [23:8]
+    cycles 4
+    describe "Subtract with carry (borrow)"
+    exec {
+      a = (addr + X) & 65535;
+      v = mem8[a];
+      t = A - v - 1 + C;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      V = bit((A ^ v) & (A ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction sbc "addr,y" {
+    size 24
+    match 0xff 0xf9
+    operand addr imm [23:8]
+    cycles 4
+    describe "Subtract with carry (borrow)"
+    exec {
+      a = (addr + Y) & 65535;
+      v = mem8[a];
+      t = A - v - 1 + C;
+      res = t & 255;
+      C = 1 - bit(t, 63);
+      V = bit((A ^ v) & (A ^ res), 7);
+      A = res;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction sec "" {
+    size 8
+    match 0xff 0x38
+    cycles 2
+    describe "Set carry"
+    exec {
+      C = 1;
+    }
+  }
+
+  instruction sed "" {
+    size 8
+    match 0xff 0xf8
+    cycles 2
+    describe "Set decimal flag (decimal mode is not simulated)"
+    exec {
+      D = 1;
+    }
+  }
+
+  instruction sei "" {
+    size 8
+    match 0xff 0x78
+    cycles 2
+    describe "Set interrupt disable"
+    exec {
+      I = 1;
+    }
+  }
+
+  instruction sta "(zp,x)" {
+    size 16
+    match 0xff 0x81
+    operand zp imm [15:8]
+    cycles 6
+    describe "Store A"
+    exec {
+      p = (zp + X) & 255;
+      a = mem8[p] | (mem8[(p + 1) & 255] << 8);
+      mem8[a] = A;
+    }
+  }
+
+  instruction sta "(zp),y" {
+    size 16
+    match 0xff 0x91
+    operand zp imm [15:8]
+    cycles 5
+    describe "Store A"
+    exec {
+      a = ((mem8[zp] | (mem8[(zp + 1) & 255] << 8)) + Y) & 65535;
+      mem8[a] = A;
+    }
+  }
+
+  instruction sta "zp" {
+    size 16
+    match 0xff 0x85
+    operand zp imm [15:8]
+    cycles 3
+    describe "Store A"
+    exec {
+      a = zp;
+      mem8[a] = A;
+    }
+  }
+
+  instruction sta "zp,x" {
+    size 16
+    match 0xff 0x95
+    operand zp imm [15:8]
+    cycles 4
+    describe "Store A"
+    exec {
+      a = (zp + X) & 255;
+      mem8[a] = A;
+    }
+  }
+
+  instruction sta "addr" {
+    size 24
+    match 0xff 0x8d
+    operand addr imm [23:8]
+    cycles 4
+    describe "Store A"
+    exec {
+      a = addr;
+      mem8[a] = A;
+    }
+  }
+
+  instruction sta "addr,x" {
+    size 24
+    match 0xff 0x9d
+    operand addr imm [23:8]
+    cycles 4
+    describe "Store A"
+    exec {
+      a = (addr + X) & 65535;
+      mem8[a] = A;
+    }
+  }
+
+  instruction sta "addr,y" {
+    size 24
+    match 0xff 0x99
+    operand addr imm [23:8]
+    cycles 4
+    describe "Store A"
+    exec {
+      a = (addr + Y) & 65535;
+      mem8[a] = A;
+    }
+  }
+
+  instruction stx "zp" {
+    size 16
+    match 0xff 0x86
+    operand zp imm [15:8]
+    cycles 3
+    describe "Store X"
+    exec {
+      a = zp;
+      mem8[a] = X;
+    }
+  }
+
+  instruction stx "zp,y" {
+    size 16
+    match 0xff 0x96
+    operand zp imm [15:8]
+    cycles 4
+    describe "Store X"
+    exec {
+      a = (zp + Y) & 255;
+      mem8[a] = X;
+    }
+  }
+
+  instruction stx "addr" {
+    size 24
+    match 0xff 0x8e
+    operand addr imm [23:8]
+    cycles 4
+    describe "Store X"
+    exec {
+      a = addr;
+      mem8[a] = X;
+    }
+  }
+
+  instruction sty "zp" {
+    size 16
+    match 0xff 0x84
+    operand zp imm [15:8]
+    cycles 3
+    describe "Store Y"
+    exec {
+      a = zp;
+      mem8[a] = Y;
+    }
+  }
+
+  instruction sty "zp,x" {
+    size 16
+    match 0xff 0x94
+    operand zp imm [15:8]
+    cycles 4
+    describe "Store Y"
+    exec {
+      a = (zp + X) & 255;
+      mem8[a] = Y;
+    }
+  }
+
+  instruction sty "addr" {
+    size 24
+    match 0xff 0x8c
+    operand addr imm [23:8]
+    cycles 4
+    describe "Store Y"
+    exec {
+      a = addr;
+      mem8[a] = Y;
+    }
+  }
+
+  instruction tax "" {
+    size 8
+    match 0xff 0xaa
+    cycles 2
+    describe "Transfer A to X"
+    exec {
+      X = A;
+      N = bit(X, 7);
+      Z = X == 0;
+    }
+  }
+
+  instruction tay "" {
+    size 8
+    match 0xff 0xa8
+    cycles 2
+    describe "Transfer A to Y"
+    exec {
+      Y = A;
+      N = bit(Y, 7);
+      Z = Y == 0;
+    }
+  }
+
+  instruction tsx "" {
+    size 8
+    match 0xff 0xba
+    cycles 2
+    describe "Transfer stack pointer to X"
+    exec {
+      X = SP;
+      N = bit(X, 7);
+      Z = X == 0;
+    }
+  }
+
+  instruction txa "" {
+    size 8
+    match 0xff 0x8a
+    cycles 2
+    describe "Transfer X to A"
+    exec {
+      A = X;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  instruction txs "" {
+    size 8
+    match 0xff 0x9a
+    cycles 2
+    describe "Transfer X to stack pointer"
+    exec {
+      SP = X;
+    }
+  }
+
+  instruction tya "" {
+    size 8
+    match 0xff 0x98
+    cycles 2
+    describe "Transfer Y to A"
+    exec {
+      A = Y;
+      N = bit(A, 7);
+      Z = A == 0;
+    }
+  }
+
+  sample """
+    ; MOS 6502: add up a table, print the sum, then double it in a subroutine.
+    ; $ marks hexadecimal. Simulator extras: prn prints A as a number, prc as a
+    ; character, prs addr prints a string, hlt (or brk) stops.
+            .data
+    table:  .byte 3, 14, 15, 9, 26     ; lives in zero page, address $0000
+
+            .text
+    main:   ldx #0                     ; index
+            lda #0                     ; sum
+    loop:   clc
+            adc table,x                ; zero-page indexed addressing
+            inx
+            cpx #5
+            bne loop                   ; Z flag: loop until X == 5
+
+            prn                        ; prints 67
+            lda #$0A
+            prc                        ; newline
+            lda #67
+            jsr twice                  ; stack holds the return address
+            prn                        ; prints 134
+            hlt
+
+    twice:  asl a                      ; A = A * 2
+            rts
+  """
+}

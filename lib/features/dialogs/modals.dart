@@ -9,6 +9,8 @@ import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/core/model/models.dart';
 import 'package:dot_asm/core/storage/storage.dart';
 import 'package:dot_asm/features/dialogs/developer_dialog.dart';
+import 'package:dot_asm/features/dialogs/processor_dialogs.dart';
+import 'package:dot_asm/features/dialogs/project_dialogs.dart';
 import 'package:dot_asm/features/shell/menus.dart' show checkForUpdates;
 import 'package:dot_asm/platform/platform.dart';
 import 'package:dot_asm/theme/icons.dart';
@@ -34,6 +36,23 @@ Widget buildActiveModal(BuildContext context, AppState state) {
         ModalUpdateAvailable(:final version) => _UpdateAvailableDialog(
           state: state,
           version: version,
+        ),
+        ModalNewProject(:final templateId, :final openInBuilder) =>
+          NewProjectDialog(
+            state: state,
+            templateId: templateId,
+            openInBuilder: openInBuilder,
+          ),
+        ModalRenameProject(:final project) => RenameProjectDialog(
+          state: state,
+          project: project,
+        ),
+        ModalImportProcessor() => ImportProcessorDialog(state: state),
+        ModalConfirmDeleteProcessor(:final processor) =>
+          ConfirmDeleteProcessorDialog(state: state, processor: processor),
+        ModalConfirmDeleteProject(:final project) => ConfirmDeleteProjectDialog(
+          state: state,
+          project: project,
         ),
       },
     ),

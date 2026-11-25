@@ -151,9 +151,7 @@ end tell
   static io.File? _linuxDesktopFile() {
     final home = io.Platform.environment['HOME'];
     if (home == null || home.isEmpty) return null;
-    return io.File(
-      '$home/.config/autostart/${AppConfig.SLUG}.desktop',
-    );
+    return io.File('$home/.config/autostart/${AppConfig.SLUG}.desktop');
   }
 
   static Future<bool> _setLinux(bool enable) async {

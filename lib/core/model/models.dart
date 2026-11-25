@@ -72,31 +72,58 @@ class WindowGeometry {
   }
 }
 
-/// Session state persisted to `state.json`: layout and window geometry.
+/// Session state persisted to `state.json`: layout, open project and window geometry.
 class SavedState {
   final double sidebarWidth;
   final bool sidebarVisible;
+
+  /// `home` or `workspace` (and later `builder`).
+  final String activeView;
+  final String? activeProjectId;
+
+  /// Width of the live processor panel in the workspace.
+  final double panelWidth;
+  final String panelTab;
   final WindowGeometry? window;
 
   const SavedState({
     this.sidebarWidth = 270,
     this.sidebarVisible = true,
+    this.activeView = 'home',
+    this.activeProjectId,
+    this.panelWidth = 460,
+    this.panelTab = 'overview',
     this.window,
   });
 
   SavedState copyWith({
     double? sidebarWidth,
     bool? sidebarVisible,
+    String? activeView,
+    String? activeProjectId,
+    bool clearActiveProject = false,
+    double? panelWidth,
+    String? panelTab,
     WindowGeometry? window,
   }) => SavedState(
     sidebarWidth: sidebarWidth ?? this.sidebarWidth,
     sidebarVisible: sidebarVisible ?? this.sidebarVisible,
+    activeView: activeView ?? this.activeView,
+    activeProjectId: clearActiveProject
+        ? null
+        : (activeProjectId ?? this.activeProjectId),
+    panelWidth: panelWidth ?? this.panelWidth,
+    panelTab: panelTab ?? this.panelTab,
     window: window ?? this.window,
   );
 
   Map<String, dynamic> toJson() => {
     'sidebarWidth': sidebarWidth,
     'sidebarVisible': sidebarVisible,
+    'activeView': activeView,
+    if (activeProjectId != null) 'activeProjectId': activeProjectId,
+    'panelWidth': panelWidth,
+    'panelTab': panelTab,
     if (window != null) 'window': window!.toJson(),
   };
 
@@ -106,6 +133,10 @@ class SavedState {
     return SavedState(
       sidebarWidth: (m['sidebarWidth'] as num?)?.toDouble() ?? 270,
       sidebarVisible: m['sidebarVisible'] as bool? ?? true,
+      activeView: (m['activeView'] as String?) ?? 'home',
+      activeProjectId: m['activeProjectId'] as String?,
+      panelWidth: (m['panelWidth'] as num?)?.toDouble() ?? 460,
+      panelTab: (m['panelTab'] as String?) ?? 'overview',
       window: w is Map<String, dynamic> ? WindowGeometry.fromJson(w) : null,
     );
   }
