@@ -14,9 +14,12 @@ final class AppConfig {
   static const String COPYRIGHT =
       'Copyright © 2026 dev.prateekthakur. All rights reserved.';
   static const String VENDOR = 'Prateek Thakur';
-  static const String TAGLINE = 'A fast, file-first desktop app.';
+  static const String TAGLINE =
+      'Learn assembly and design processors: run code and watch the CPU work.';
   static const String DESCRIPTION =
-      'dot ASM is a fast, file-first desktop app.';
+      'dot ASM is a desktop app for learning assembly and processor design. Write assembly, run it on a simulated '
+      'processor and watch registers, flags, memory and the decoded instruction change as you step. Pick a processor '
+      'from the gallery (RISC-V, MIPS, ARM, x86, 6502, AVR) or build your own.';
   static const String REPOSITORY =
       'https://github.com/prateekthakur272/dot_asm';
   static const String HOMEPAGE = REPOSITORY;

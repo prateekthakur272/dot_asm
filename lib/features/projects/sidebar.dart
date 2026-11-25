@@ -4,11 +4,13 @@ import 'package:dot_asm/app/app_state.dart';
 import 'package:dot_asm/components/buttons.dart';
 import 'package:dot_asm/components/context_menu.dart';
 import 'package:dot_asm/components/modifiers.dart';
+import 'package:dot_asm/components/selectable_row.dart';
 import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/core/model/project.dart';
 import 'package:dot_asm/platform/platform.dart';
 import 'package:dot_asm/theme/icons.dart';
 import 'package:dot_asm/theme/theme.dart';
+import 'package:dot_asm/utils/app_config.dart';
 
 /// Left sidebar: the list of projects.
 class ProjectsSidebar extends StatelessWidget {
@@ -25,6 +27,7 @@ class ProjectsSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          AppHeader(state: state),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
             child: Row(
@@ -184,15 +187,11 @@ class _ProjectRow extends StatelessWidget {
             ],
           );
         },
-        builder: (context, hovered) => Container(
+        builder: (context, hovered) => SelectableRow(
+          selected: selected,
+          hovered: hovered,
           margin: const EdgeInsets.only(bottom: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected
-                ? p.selected
-                : (hovered ? p.hover : Colors.transparent),
-            borderRadius: BorderRadius.circular(6),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
             children: [
               Icon(
@@ -273,6 +272,53 @@ class _MissingRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The app's header, at the top of the sidebar: the app name with search, preferences and the sidebar toggle.
+class AppHeader extends StatelessWidget {
+  const AppHeader({super.key, required this.state});
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pal;
+    final mod = Platform.isMac ? '⌘K' : 'Ctrl+K';
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.fromLTRB(14, 0, 8, 0),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: p.border.withOpacity(0.7))),
+      ),
+      child: Row(
+        children: [
+          Image.asset(
+            'assets/icons/header_logo.png',
+            width: 24,
+            height: 24,
+            filterQuality: FilterQuality.medium,
+          ),
+          const SizedBox(width: 9),
+          const Expanded(
+            child: T(AppConfig.NAME, size: 15, weight: FontWeight.w700),
+          ),
+          IconBtn(
+            icon: Icons.search_rounded,
+            tooltip: 'Command palette ($mod)',
+            size: 28,
+            iconSize: 16,
+            onClick: () => state.paletteOpen = true,
+          ),
+          IconBtn(
+            icon: AppIcons.settings,
+            tooltip: 'Preferences (${Platform.isMac ? "⌘," : "Ctrl+,"})',
+            size: 28,
+            iconSize: 15,
+            onClick: () => state.modal = const ModalSettings(),
+          ),
+        ],
       ),
     );
   }

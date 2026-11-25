@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:dot_asm/app/app_state.dart';
 import 'package:dot_asm/components/buttons.dart';
+import 'package:dot_asm/components/inputs.dart';
 import 'package:dot_asm/components/layout.dart';
 import 'package:dot_asm/components/modifiers.dart';
 import 'package:dot_asm/components/text.dart';
@@ -279,9 +280,8 @@ class _SettingsDialogState extends State<_SettingsDialog> {
                   ],
                 ),
               ),
-              Switch.adaptive(
+              AppCheckbox(
                 value: settings.openAtLogin,
-                activeColor: p.accent,
                 onChanged: (val) {
                   _updateSettings((s) => s.copyWith(openAtLogin: val));
                   widget.state.setOpenAtLogin(val);

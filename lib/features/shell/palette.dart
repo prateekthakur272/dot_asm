@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dot_asm/app/app_state.dart';
 import 'package:dot_asm/components/modifiers.dart';
+import 'package:dot_asm/components/selectable_row.dart';
 import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/core/storage/storage.dart';
 import 'package:dot_asm/features/shell/menus.dart' show checkForUpdates;
@@ -398,16 +399,12 @@ class _CommandPaletteState extends State<CommandPalette> {
                                   cursor: SystemMouseCursors.click,
                                   onTap: item.action,
                                   builder: (context, hovered) {
-                                    final bg = isSelected
-                                        ? p.accent.withOpacity(0.14)
-                                        : (hovered
-                                              ? p.hover
-                                              : Colors.transparent);
-
-                                    return Container(
-                                      color: bg,
+                                    return SelectableRow(
+                                      selected: isSelected,
+                                      hovered: hovered,
+                                      radius: 0,
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
+                                        horizontal: 11,
                                         vertical: 8,
                                       ),
                                       child: Row(

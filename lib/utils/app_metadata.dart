@@ -70,6 +70,10 @@ final class AppMetadata {
   /// Application name.
   static String get appName => _appName;
 
+  /// Pretends the app reports [version] (used by tests and by the script that renders the screenshots).
+  @visibleForTesting
+  static void debugSetVersion(String version) => _version = version;
+
   /// Forgets what was loaded (used in tests).
   @visibleForTesting
   static void reset() {

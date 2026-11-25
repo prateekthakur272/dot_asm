@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dot_asm/components/buttons.dart';
 import 'package:dot_asm/components/modifiers.dart';
+import 'package:dot_asm/components/selectable_row.dart';
 import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/features/workspace/editor_logic.dart';
 import 'package:dot_asm/theme/theme.dart';
@@ -258,9 +259,10 @@ class _CompletionPopupState extends State<CompletionPopup> {
                     onTap: () => widget.onPick(i),
                     child: MouseRegion(
                       cursor: SystemMouseCursors.click,
-                      child: Container(
-                        color: active ? p.selected : Colors.transparent,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: SelectableRow(
+                        selected: active,
+                        radius: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
                         child: Row(
                           children: [
                             Container(

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:dot_asm/components/empty_state.dart';
 import 'package:dot_asm/app/app_state.dart';
 import 'package:dot_asm/app/sim_session.dart';
-import 'package:dot_asm/components/buttons.dart';
 import 'package:dot_asm/components/drag_devices.dart';
 import 'package:dot_asm/components/modifiers.dart';
 import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/core/sim/machine/machine.dart';
+import 'package:dot_asm/core/sim/machine/memory.dart' show hex;
 import 'package:dot_asm/features/workspace/code_editor.dart';
 import 'package:dot_asm/features/workspace/processor_panel.dart';
 import 'package:dot_asm/platform/platform.dart';
@@ -103,130 +103,253 @@ class _Toolbar extends StatelessWidget {
     final p = context.pal;
     final project = state.activeProject!;
     final spec = state.activeProcessor!;
-    final mod = Platform.isMac;
+    final mac = Platform.isMac;
     return ListenableBuilder(
       listenable: state.sim,
       builder: (context, _) {
         final sim = state.sim;
         final m = sim.machine;
         return Container(
-          height: 46,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: p.panel,
             border: Border(bottom: BorderSide(color: p.border)),
           ),
           child: Row(
             children: [
+              // Where we are: project > processor
               Flexible(
                 flex: 0,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 220),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  constraints: const BoxConstraints(maxWidth: 280),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      T(
-                        project.name,
-                        size: 13,
-                        weight: FontWeight.w700,
-                        maxLines: 1,
+                      Flexible(
+                        child: T(
+                          project.name,
+                          size: 12.5,
+                          weight: FontWeight.w700,
+                          maxLines: 1,
+                        ),
                       ),
-                      T(spec.name, size: 10.5, color: p.muted, maxLines: 1),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 15,
+                        color: p.muted,
+                      ),
+                      Icon(Icons.memory_rounded, size: 12, color: p.muted),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: T(
+                          spec.name,
+                          size: 11,
+                          color: p.muted,
+                          maxLines: 1,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
-              if (sim.running)
-                Btn(
-                  label: 'Pause',
-                  icon: Icons.pause_rounded,
-                  primary: true,
-                  height: 30,
-                  fontSize: 12,
-                  onClick: sim.pause,
-                )
-              else
-                Btn(
-                  label: 'Run',
-                  icon: Icons.play_arrow_rounded,
-                  primary: true,
-                  height: 30,
-                  fontSize: 12,
-                  onClick: sim.canRun ? sim.run : null,
-                ),
-              const SizedBox(width: 6),
-              Btn(
-                label: 'Step',
-                icon: Icons.skip_next_rounded,
-                height: 30,
-                fontSize: 12,
-                onClick: sim.canStep ? sim.stepOnce : null,
-              ),
-              const SizedBox(width: 6),
-              IconBtn(
-                icon: Icons.undo_rounded,
-                tooltip: 'Step back',
-                size: 30,
-                onClick: sim.canUndo ? sim.stepBack : null,
-              ),
-              IconBtn(
-                icon: Icons.restart_alt_rounded,
-                tooltip: 'Reset',
-                size: 30,
-                onClick: m == null ? null : sim.reset,
-              ),
-              IconBtn(
-                icon: Icons.build_circle_outlined,
-                tooltip: 'Assemble (${mod ? "⌘⇧B" : "Ctrl+Shift+B"})',
-                size: 30,
-                onClick: state.assembleNow,
-              ),
-              const SizedBox(width: 10),
-              Container(width: 1, height: 20, color: p.border),
-              const SizedBox(width: 10),
-              T('Speed', size: 11, color: p.muted),
-              const SizedBox(width: 6),
-              for (final s in SimSpeed.values)
-                HoverBuilder(
-                  cursor: SystemMouseCursors.click,
-                  onTap: () => sim.setSpeed(s),
-                  builder: (context, hovered) => Container(
-                    margin: const EdgeInsets.only(right: 2),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 4,
+              const SizedBox(width: 14),
+              // Run controls, like the debug toolbar of an IDE
+              _ToolGroup(
+                children: [
+                  if (sim.running)
+                    _ToolButton(
+                      icon: Icons.pause_rounded,
+                      label: 'Pause',
+                      tooltip: 'Pause (F5)',
+                      color: p.warn,
+                      onTap: sim.pause,
+                    )
+                  else
+                    _ToolButton(
+                      icon: Icons.play_arrow_rounded,
+                      label: 'Run',
+                      tooltip: 'Run (F5)',
+                      color: p.ok,
+                      onTap: sim.canRun ? sim.run : null,
                     ),
-                    decoration: BoxDecoration(
-                      color: s == sim.speed
-                          ? p.accent.withOpacity(0.16)
-                          : (hovered ? p.hover : Colors.transparent),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: T(
-                      s.label,
-                      size: 10.5,
-                      weight: FontWeight.w600,
-                      color: s == sim.speed ? p.accent : p.muted,
+                  _ToolButton(
+                    icon: Icons.skip_next_rounded,
+                    tooltip: 'Step (F10)',
+                    onTap: sim.canStep ? sim.stepOnce : null,
+                  ),
+                  _ToolButton(
+                    icon: Icons.skip_previous_rounded,
+                    tooltip: 'Step back (Shift+F10)',
+                    onTap: sim.canUndo ? sim.stepBack : null,
+                  ),
+                  _ToolButton(
+                    icon: Icons.restart_alt_rounded,
+                    tooltip: 'Reset the processor',
+                    onTap: m == null ? null : sim.reset,
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
+              _ToolGroup(
+                children: [
+                  _ToolButton(
+                    icon: Icons.build_circle_outlined,
+                    tooltip: 'Assemble (${mac ? "⌘⇧B" : "Ctrl+Shift+B"})',
+                    onTap: state.assembleNow,
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
+              // Speed
+              _ToolGroup(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 7),
+                    child: Tooltip(
+                      message: 'Run speed',
+                      child: Icon(
+                        Icons.speed_rounded,
+                        size: 14,
+                        color: p.muted,
+                      ),
                     ),
                   ),
-                ),
-              const Spacer(),
-              Btn(
-                label: 'Processor builder',
-                icon: Icons.memory_rounded,
-                height: 30,
-                fontSize: 12,
-                outlined: true,
-                onClick: state.openBuilder,
+                  for (final s in SimSpeed.values)
+                    HoverBuilder(
+                      cursor: SystemMouseCursors.click,
+                      onTap: () => sim.setSpeed(s),
+                      builder: (context, hovered) => Container(
+                        height: 24,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 9),
+                        decoration: BoxDecoration(
+                          color: s == sim.speed
+                              ? p.accent.withOpacity(0.16)
+                              : (hovered ? p.hover : Colors.transparent),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: T(
+                          s.label,
+                          size: 10.5,
+                          weight: FontWeight.w600,
+                          color: s == sim.speed ? p.accent : p.muted,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(width: 10),
+              const Spacer(),
+              if (m != null) ...[
+                Tooltip(
+                  message: 'Program counter',
+                  child: Row(
+                    children: [
+                      T(
+                        'PC',
+                        size: 10,
+                        color: p.muted,
+                        weight: FontWeight.w700,
+                      ),
+                      const SizedBox(width: 5),
+                      MonoText(
+                        hex(m.pc, spec.wordBits ~/ 4),
+                        size: 11,
+                        color: p.text,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
               _StatusPill(sim: sim),
+              const SizedBox(width: 10),
+              _ToolGroup(
+                children: [
+                  _ToolButton(
+                    icon: Icons.developer_board_rounded,
+                    tooltip: 'Processor builder',
+                    onTap: state.openBuilder,
+                  ),
+                ],
+              ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// A rounded strip that groups related toolbar buttons.
+class _ToolGroup extends StatelessWidget {
+  const _ToolGroup({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pal;
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      decoration: BoxDecoration(
+        color: p.field,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: p.border),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: children),
+    );
+  }
+}
+
+/// An icon button of the toolbar, optionally with a label and an accent colour (Run is green, Pause amber).
+class _ToolButton extends StatelessWidget {
+  const _ToolButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.label,
+    this.color,
+  });
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final String? label;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pal;
+    final enabled = onTap != null;
+    final fg = !enabled ? p.muted.withOpacity(0.4) : (color ?? p.text);
+    return Tooltip(
+      message: tooltip,
+      waitDuration: const Duration(milliseconds: 500),
+      child: HoverBuilder(
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        onTap: onTap,
+        builder: (context, hovered) => Container(
+          height: 24,
+          margin: const EdgeInsets.symmetric(horizontal: 1),
+          padding: EdgeInsets.symmetric(horizontal: label == null ? 5 : 8),
+          decoration: BoxDecoration(
+            color: enabled && color != null
+                ? color!.withOpacity(hovered ? 0.24 : 0.14)
+                : (enabled && hovered ? p.hover : Colors.transparent),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 17, color: fg),
+              if (label != null) ...[
+                const SizedBox(width: 3),
+                T(label!, size: 11.5, weight: FontWeight.w700, color: fg),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:dot_asm/components/buttons.dart';
 import 'package:dot_asm/components/inputs.dart';
 import 'package:dot_asm/components/layout.dart';
 import 'package:dot_asm/components/modifiers.dart';
+import 'package:dot_asm/components/selectable_row.dart';
 import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/app/gallery.dart';
 import 'package:dot_asm/app/processor_catalog.dart';
@@ -367,18 +368,11 @@ class _PickerRow extends StatelessWidget {
     return HoverBuilder(
       cursor: SystemMouseCursors.click,
       onTap: onTap,
-      builder: (context, hovered) => Container(
+      builder: (context, hovered) => SelectableRow(
+        selected: selected,
+        hovered: hovered,
         margin: const EdgeInsets.only(bottom: 2),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected
-              ? p.accent.withOpacity(0.14)
-              : (hovered ? p.hover : Colors.transparent),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: selected ? p.accent.withOpacity(0.7) : Colors.transparent,
-          ),
-        ),
         child: Row(
           children: [
             Container(
@@ -413,8 +407,6 @@ class _PickerRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (selected)
-              Icon(Icons.check_circle_rounded, size: 15, color: p.accent),
           ],
         ),
       ),

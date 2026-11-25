@@ -1,0 +1,54 @@
+# dot ASM — marketplace listing.
+# Read by the marketplace from the default branch of this repo.
+# See the marketplace's sample/.marketplace/app-info.yaml for every field.
+
+name: dot ASM
+tagline: Learn assembly and design processors: run code on a simulated CPU and watch it work.
+
+description: |
+  dot ASM is a desktop app for learning assembly language and understanding how a
+  processor works from the inside. Write assembly, run it on a simulated
+  processor, and watch the machine react: registers, flags, memory, the decoded
+  instruction bits and a step-by-step trace update live as you step, run, pause
+  or step backwards.
+
+  Pick the architecture to learn on from the processor gallery (RISC-V, MIPS,
+  ARM, x86, x86-64, MOS 6502, Atmel AVR and a small teaching CPU), grouped by
+  family and era. Every processor is a plain, readable text file inside your
+  project, so you can open it, change it, and see exactly how an instruction is
+  encoded and what it does.
+
+  Go deeper with the processor builder: design your own CPU (word size,
+  registers, flags, memory map, instruction encodings and semantics), validate
+  it live, and keep it as a .cpu file next to your code. A real code editor with
+  syntax highlighting, suggestions and find and replace is built in, for both
+  your assembly and the processor definition.
+
+  Projects are ordinary folders that you choose, with a project file, your source
+  and the processors it uses. Everything stays on your computer: no account,
+  no cloud, no telemetry.
+
+category: Education
+
+# Desktop app built with Flutter. macOS builds are universal (Apple Silicon and Intel).
+supported_os:
+  - macos
+  - windows
+  - linux
+
+developer: Prateek Thakur
+website: https://github.com/prateekthakur272/dot_asm
+support_url: https://github.com/prateekthakur272/dot_asm/issues
+
+tags:
+  - assembly
+  - processor
+  - cpu
+  - simulator
+  - emulator
+  - education
+  - risc-v
+  - arm
+  - x86
+  - computer-architecture
+  - flutter

@@ -227,3 +227,25 @@ class _BoundTextFieldState extends State<BoundTextField> {
     );
   }
 }
+
+/// The app's checkbox: a small rounded box that fills with the accent colour when checked.
+class AppCheckbox extends StatelessWidget {
+  const AppCheckbox({super.key, required this.value, required this.onChanged});
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pal;
+    return Checkbox(
+      value: value,
+      onChanged: onChanged == null ? null : (v) => onChanged!(v ?? false),
+      activeColor: p.accent,
+      checkColor: p.onAccent,
+      side: BorderSide(color: p.muted, width: 1.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}

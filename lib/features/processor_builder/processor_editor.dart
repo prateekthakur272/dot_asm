@@ -10,10 +10,12 @@ import 'package:dot_asm/core/dsl/dsl.dart';
 import 'package:dot_asm/core/sim/dsl/processor_dsl.dart';
 import 'package:dot_asm/components/inputs.dart';
 import 'package:dot_asm/components/modifiers.dart';
+import 'package:dot_asm/components/selectable_row.dart';
 import 'package:dot_asm/components/text.dart';
 import 'package:dot_asm/features/processor_builder/builder_widgets.dart';
 import 'package:dot_asm/features/processor_builder/dsl_editor.dart';
 import 'package:dot_asm/features/processor_builder/instruction_editor.dart';
+import 'package:dot_asm/features/processor_builder/starter_editor.dart';
 import 'package:dot_asm/platform/platform.dart';
 import 'package:dot_asm/theme/icons.dart';
 import 'package:dot_asm/theme/theme.dart';
@@ -55,68 +57,55 @@ class _ProcessorEditorState extends State<ProcessorEditor> {
     return ListenableBuilder(
       listenable: draft,
       builder: (context, _) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _header(context, p),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _nav(p),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: _section == _Section.instructions
-                              ? Center(
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 1000,
-                                    ),
-                                    child: InstructionsTab(draft: draft),
-                                  ),
-                                )
-                              : _section == _Section.json
-                              ? _JsonTab(draft: draft)
-                              : ListView(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 20,
-                                  ),
-                                  physics: const ClampingScrollPhysics(),
-                                  children: [
-                                    Center(
-                                      child: ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          maxWidth: 960,
+        // The builder paints its own background, so it never shows whatever is behind it.
+        return ColoredBox(
+          color: p.bg,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _header(context, p),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _nav(p),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: _section == _Section.instructions
+                                ? InstructionsTab(draft: draft)
+                                : _section == _Section.json
+                                ? _JsonTab(draft: draft)
+                                : ListView(
+                                    padding: EdgeInsets.zero,
+                                    physics: const ClampingScrollPhysics(),
+                                    children: [
+                                      switch (_section) {
+                                        _Section.general => _GeneralTab(
+                                          draft: draft,
                                         ),
-                                        child: switch (_section) {
-                                          _Section.general => _GeneralTab(
-                                            draft: draft,
-                                          ),
-                                          _Section.registers => _RegistersTab(
-                                            draft: draft,
-                                          ),
-                                          _Section.memory => _MemoryTab(
-                                            draft: draft,
-                                          ),
-                                          _ => _AdvancedTab(draft: draft),
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                        _problems(p),
-                      ],
+                                        _Section.registers => _RegistersTab(
+                                          draft: draft,
+                                        ),
+                                        _Section.memory => _MemoryTab(
+                                          draft: draft,
+                                        ),
+                                        _ => _AdvancedTab(draft: draft),
+                                      },
+                                    ],
+                                  ),
+                          ),
+                          _problems(p),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -331,29 +320,13 @@ class _ProcessorEditorState extends State<ProcessorEditor> {
               builder: (context, hovered) {
                 final active = s == _section;
                 final n = _count(s);
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 3),
+                return SelectableRow(
+                  selected: active,
+                  hovered: hovered,
                   height: 34,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: active
-                        ? p.accent.withOpacity(0.1)
-                        : (hovered ? p.hover : Colors.transparent),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  margin: const EdgeInsets.only(bottom: 3),
                   child: Row(
                     children: [
-                      Container(
-                        width: 3,
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: active ? p.accent : Colors.transparent,
-                          borderRadius: const BorderRadius.horizontal(
-                            right: Radius.circular(3),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 9),
                       Icon(
                         s.icon,
                         size: 15,
@@ -371,7 +344,6 @@ class _ProcessorEditorState extends State<ProcessorEditor> {
                       ),
                       if (n != null)
                         Container(
-                          margin: const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
                             vertical: 1,
@@ -758,35 +730,38 @@ class _GeneralTab extends StatelessWidget {
               ),
               Labeled(
                 'Alignment',
-                Container(
-                  height: 34,
-                  padding: const EdgeInsets.only(left: 10),
-                  decoration: BoxDecoration(
-                    color: p.field,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: p.border),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: T(
-                          'Fault on misaligned access',
-                          size: 12,
-                          maxLines: 1,
+                HoverBuilder(
+                  cursor: SystemMouseCursors.click,
+                  onTap: () => draft.edit((j) {
+                    if (!aligned) {
+                      j['alignedAccess'] = true;
+                    } else {
+                      j.remove('alignedAccess');
+                    }
+                  }),
+                  builder: (context, hovered) => Container(
+                    height: 34,
+                    padding: const EdgeInsets.only(left: 6, right: 10),
+                    decoration: BoxDecoration(
+                      color: hovered ? p.hover : p.field,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: p.border),
+                    ),
+                    child: Row(
+                      children: [
+                        IgnorePointer(
+                          child: AppCheckbox(value: aligned, onChanged: (_) {}),
                         ),
-                      ),
-                      Switch.adaptive(
-                        value: aligned,
-                        activeColor: p.accent,
-                        onChanged: (v) => draft.edit((j) {
-                          if (v) {
-                            j['alignedAccess'] = true;
-                          } else {
-                            j.remove('alignedAccess');
-                          }
-                        }),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        const Expanded(
+                          child: T(
+                            'Fault on misaligned access',
+                            size: 12,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -830,9 +805,8 @@ class _RegistersTab extends StatelessWidget {
           title: 'Register file',
           icon: Icons.developer_board_rounded,
           subtitle: 'A bank of numbered general-purpose registers (x0..x31, r0..r15, ...). Instructions select them with register operands.',
-          trailing: Switch.adaptive(
+          trailing: AppCheckbox(
             value: rf != null,
-            activeColor: p.accent,
             onChanged: (on) => draft.edit((j) {
               if (on) {
                 j['registerFile'] = <String, dynamic>{
@@ -1355,14 +1329,16 @@ class _AdvancedTab extends StatelessWidget {
           title: 'Starter program',
           icon: Icons.code_rounded,
           subtitle: 'New projects for this processor begin with this code.',
-          child: BoundTextField(
-            value: textOf(j['sample']),
-            revision: draft.revision,
-            mono: true,
-            lines: 10,
-            hint: '# assembly source',
-            onChanged: (v) => draft.set('sample', v),
-          ),
+          child: draft.spec != null
+              ? StarterCodeEditor(draft: draft)
+              : BoundTextField(
+                  value: textOf(j['sample']),
+                  revision: draft.revision,
+                  mono: true,
+                  lines: 10,
+                  hint: '# assembly source',
+                  onChanged: (v) => draft.set('sample', v),
+                ),
         ),
         SectionCard(
           title: 'Pseudo-instructions',
@@ -1474,55 +1450,51 @@ class _JsonTabState extends State<_JsonTab> {
   @override
   Widget build(BuildContext context) {
     final p = context.pal;
-    return Padding(
-      padding: const EdgeInsets.all(16),
+    return Container(
+      color: p.panel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: T(
-                  'The processor exactly as it is saved in the project\'s cpu/ folder. Edit it for anything the forms do not cover, then Apply (${Platform.isMac ? '⌘' : 'Ctrl+'}Enter).',
-                  size: 11.5,
-                  color: p.muted,
-                  overflow: TextOverflow.visible,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: T(
+                    'The processor exactly as it is saved in the project\'s cpu/ folder. Edit it for anything the forms do not cover, then Apply (${Platform.isMac ? '⌘' : 'Ctrl+'}Enter).',
+                    size: 11.5,
+                    color: p.muted,
+                    overflow: TextOverflow.visible,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Btn(
-                label: 'Reload from form',
-                height: 28,
-                fontSize: 11.5,
-                onClick: () => setState(() {
-                  _debounce?.cancel();
-                  _c.text = _pretty();
-                  _errLine = null;
-                  _error = null;
-                  _edited = false;
-                }),
-              ),
-              const SizedBox(width: 6),
-              Btn(
-                label: 'Apply',
-                primary: true,
-                height: 28,
-                fontSize: 11.5,
-                onClick: _edited || _error != null ? _apply : null,
-              ),
-            ],
+                const SizedBox(width: 8),
+                Btn(
+                  label: 'Reload from form',
+                  height: 28,
+                  fontSize: 11.5,
+                  onClick: () => setState(() {
+                    _debounce?.cancel();
+                    _c.text = _pretty();
+                    _errLine = null;
+                    _error = null;
+                    _edited = false;
+                  }),
+                ),
+                const SizedBox(width: 6),
+                Btn(
+                  label: 'Apply',
+                  primary: true,
+                  height: 28,
+                  fontSize: 11.5,
+                  onClick: _edited || _error != null ? _apply : null,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
+          Container(height: 1, color: p.border.withOpacity(0.7)),
           Expanded(
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: _error != null ? p.err.withOpacity(0.6) : p.border,
-                ),
-              ),
-              child: DslEditor(
+            child: ClipRect(
+              child: SourceEditor(
                 controller: _c,
                 fileName:
                     '${widget.draft.id.isEmpty ? 'processor' : widget.draft.id}.cpu',
@@ -1534,15 +1506,16 @@ class _JsonTabState extends State<_JsonTab> {
               ),
             ),
           ),
-          if (_error != null && _errLine == null) ...[
-            const SizedBox(height: 8),
-            T(
-              _error!,
-              size: 11.5,
-              color: p.err,
-              overflow: TextOverflow.visible,
+          if (_error != null && _errLine == null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: T(
+                _error!,
+                size: 11.5,
+                color: p.err,
+                overflow: TextOverflow.visible,
+              ),
             ),
-          ],
         ],
       ),
     );

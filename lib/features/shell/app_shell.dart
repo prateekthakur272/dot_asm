@@ -10,7 +10,6 @@ import 'package:dot_asm/features/projects/sidebar.dart';
 import 'package:dot_asm/features/workspace/workspace_view.dart';
 import 'package:dot_asm/features/shell/palette.dart';
 import 'package:dot_asm/features/shell/status_bar.dart';
-import 'package:dot_asm/features/shell/top_bar.dart';
 import 'package:dot_asm/features/shell/window_chrome.dart';
 import 'package:dot_asm/theme/theme.dart';
 import 'package:dot_asm/utils/app_config.dart';
@@ -78,8 +77,6 @@ class AppShell extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Merged Unified Header (Branding + Search + Controls)
-                AppTopBar(state: state),
                 // Workspace body: collapsible left sidebar + main content
                 Expanded(
                   child: Row(
@@ -105,13 +102,16 @@ class AppShell extends StatelessWidget {
                         ),
                       ],
                       Expanded(
-                        child: switch (ui.activeView) {
-                          'builder' => BuilderView(state: state),
-                          'gallery' => GalleryView(state: state),
-                          'workspace' when state.activeProject != null =>
-                            WorkspaceView(state: state),
-                          _ => HomeView(state: state),
-                        },
+                        child: ColoredBox(
+                          color: p.bg,
+                          child: switch (ui.activeView) {
+                            'builder' => BuilderView(state: state),
+                            'gallery' => GalleryView(state: state),
+                            'workspace' when state.activeProject != null =>
+                              WorkspaceView(state: state),
+                            _ => HomeView(state: state),
+                          },
+                        ),
                       ),
                     ],
                   ),

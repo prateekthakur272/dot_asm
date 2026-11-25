@@ -71,8 +71,14 @@ class _InstructionsTabState extends State<InstructionsTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+        Container(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+          decoration: BoxDecoration(
+            color: p.panel,
+            border: Border(
+              bottom: BorderSide(color: p.border.withOpacity(0.7)),
+            ),
+          ),
           child: Row(
             children: [
               Expanded(
@@ -130,7 +136,7 @@ class _InstructionsTabState extends State<InstructionsTab> {
         Expanded(
           child: ListView.builder(
             controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            padding: EdgeInsets.zero,
             physics: const ClampingScrollPhysics(),
             itemCount: shown.length,
             itemBuilder: (context, k) {
@@ -239,14 +245,16 @@ class _InstructionCard extends StatelessWidget {
     final mn = _t(map['mnemonic']);
     final bits = _i(map['bits'], _i(draft.json['instrBits'], 32));
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
-        color: p.panel,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: hasProblem
-              ? p.err.withOpacity(0.6)
-              : (open ? p.accent.withOpacity(0.45) : p.border.withOpacity(0.8)),
+        color: open
+            ? Color.alphaBlend(p.accent.withOpacity(0.04), p.panel)
+            : p.panel,
+        border: Border(
+          bottom: BorderSide(
+            color: hasProblem
+                ? p.err.withOpacity(0.6)
+                : p.border.withOpacity(0.6),
+          ),
         ),
       ),
       child: Column(
@@ -256,14 +264,8 @@ class _InstructionCard extends StatelessWidget {
             cursor: SystemMouseCursors.click,
             onTap: onToggle,
             builder: (context, hovered) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(
-                color: hovered ? p.hover : null,
-                borderRadius: BorderRadius.vertical(
-                  top: const Radius.circular(10),
-                  bottom: Radius.circular(open ? 0 : 10),
-                ),
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+              decoration: BoxDecoration(color: hovered ? p.hover : null),
               child: Row(
                 children: [
                   Icon(
@@ -325,7 +327,7 @@ class _InstructionCard extends StatelessWidget {
           ),
           if (open)
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -426,9 +428,8 @@ class _InstructionCard extends StatelessWidget {
                               maxLines: 2,
                             ),
                           ),
-                          Switch.adaptive(
+                          AppCheckbox(
                             value: map['cond'] == true,
-                            activeColor: p.accent,
                             onChanged: (v) => draft.edit((_) {
                               if (v) {
                                 map['cond'] = true;

@@ -412,15 +412,18 @@ void main() {
     await tester.pumpWidget(host(s));
     // Home and sidebar offer the gallery but not the builder.
     expect(find.text('Processor gallery'), findsWidgets);
-    expect(find.text('Processor builder'), findsNothing);
+    expect(find.byTooltip('Processor builder'), findsNothing);
 
     expect(
       s.createProject(name: 'UI3', parentDir: work.path, templateId: 'tiny16'),
       isNull,
     );
     await tester.pump(const Duration(milliseconds: 600));
-    expect(find.text('Processor builder'), findsOneWidget); // workspace toolbar
-    await tester.tap(find.text('Processor builder'));
+    expect(
+      find.byTooltip('Processor builder'),
+      findsOneWidget,
+    ); // workspace toolbar
+    await tester.tap(find.byTooltip('Processor builder'));
     await tester.pump();
     expect(s.uiState.activeView, 'builder');
     expect(s.builderDraft!.originalId, 'tiny16');
@@ -431,7 +434,7 @@ void main() {
 
     s.closeProject();
     await tester.pump();
-    expect(find.text('Processor builder'), findsNothing);
+    expect(find.byTooltip('Processor builder'), findsNothing);
     await tester.pump(const Duration(seconds: 4));
   });
 }

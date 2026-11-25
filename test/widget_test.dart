@@ -7,6 +7,7 @@ import 'support/templates.dart';
 
 import 'package:dot_asm/app/app_state.dart';
 import 'package:dot_asm/core/storage/storage.dart';
+import 'package:dot_asm/features/projects/sidebar.dart';
 import 'package:dot_asm/features/shell/app_shell.dart';
 import 'package:dot_asm/features/shell/window_chrome.dart';
 import 'package:dot_asm/theme/theme.dart';
@@ -177,4 +178,42 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     expect(state.source, contains('Sum the numbers'));
   });
+
+  testWidgets(
+    'the title bar stays and the app header sits at the top of the sidebar',
+    (tester) async {
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final state = AppState();
+      await tester.pumpWidget(
+        PalScope(
+          pal: DotAsmTheme.palFor(true),
+          child: MaterialApp(
+            theme: DotAsmTheme.makeTheme(true),
+            home: Scaffold(
+              body: AppShell(state: state, chrome: const WindowChrome()),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      // The name appears in the title bar and in the sidebar's header, which belongs to the sidebar.
+      expect(find.text('dot ASM'), findsWidgets);
+      expect(
+        find.descendant(
+          of: find.byType(ProjectsSidebar),
+          matching: find.byType(AppHeader),
+        ),
+        findsOneWidget,
+      );
+      // Hiding the sidebar takes its header with it and leaves nothing else at the top.
+      state.toggleSidebar();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(AppHeader), findsNothing);
+      state.toggleSidebar();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(AppHeader), findsOneWidget);
+    },
+  );
 }

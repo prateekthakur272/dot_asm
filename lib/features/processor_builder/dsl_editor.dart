@@ -240,10 +240,19 @@ class DslEditingController extends TextEditingController {
   }
 }
 
-/// A code editor for `.cpu` text: line numbers, highlighting, keyword suggestions, brace-aware indentation, find and
-/// replace, and the line shortcuts of the assembly editor. [errorLine] marks where the text does not parse.
-class DslEditor extends StatefulWidget {
-  const DslEditor({
+/// Suggestions for the word at the caret: where the word starts and ends, and what could replace it.
+typedef Suggester = CompletionResult Function(
+  String text,
+  int caret, {
+  bool force,
+});
+
+/// A code editor: line numbers, highlighting (through the [controller]), suggestions, indentation, find and replace,
+/// and the line shortcuts. By default it edits `.cpu` text (two-space, brace-aware, `#` comments, keyword
+/// suggestions); give it a [suggester], [hintFor] and the other options to edit something else, such as assembly.
+/// [errorLine] marks where the text does not parse.
+class SourceEditor extends StatefulWidget {
+  const SourceEditor({
     super.key,
     required this.controller,
     required this.fileName,
@@ -252,9 +261,27 @@ class DslEditor extends StatefulWidget {
     this.errorMessage,
     this.onChanged,
     this.onSubmit,
+    this.suggester,
+    this.hintFor,
+    this.tabSize = kDslTab,
+    this.blocks = true,
+    this.commentMarker = '#',
   });
 
-  final DslEditingController controller;
+  final TextEditingController controller;
+
+  /// Suggestions; the `.cpu` keywords when null.
+  final Suggester? suggester;
+
+  /// The help shown in the status strip for the line at the caret; the `.cpu` keyword help when null.
+  final CompletionItem? Function(String lineText)? hintFor;
+
+  /// Spaces per indent level.
+  final int tabSize;
+
+  /// Whether `{ }` blocks drive the indentation (the `.cpu` language) or only the previous line does (assembly).
+  final bool blocks;
+  final String commentMarker;
   final String fileName;
   final String subtitle;
 
@@ -267,10 +294,10 @@ class DslEditor extends StatefulWidget {
   final VoidCallback? onSubmit;
 
   @override
-  State<DslEditor> createState() => _DslEditorState();
+  State<SourceEditor> createState() => _SourceEditorState();
 }
 
-class _DslEditorState extends State<DslEditor> {
+class _SourceEditorState extends State<SourceEditor> {
   final ScrollController _vScroll = ScrollController();
   final ScrollController _hScroll = ScrollController();
   late final FocusNode _focus;
@@ -290,7 +317,7 @@ class _DslEditorState extends State<DslEditor> {
   List<TextRange> _matches = const [];
   int _matchIdx = 0;
 
-  DslEditingController get _c => widget.controller;
+  TextEditingController get _c => widget.controller;
   bool get _popupOpen => _comp != null && _comp!.items.isNotEmpty;
   int get _caret => _c.selection.isValid ? _c.selection.extentOffset : 0;
 
@@ -303,7 +330,7 @@ class _DslEditorState extends State<DslEditor> {
   }
 
   @override
-  void didUpdateWidget(DslEditor old) {
+  void didUpdateWidget(SourceEditor old) {
     super.didUpdateWidget(old);
     if (old.controller != widget.controller) {
       old.controller.removeListener(_onController);
@@ -511,7 +538,9 @@ class _DslEditorState extends State<DslEditor> {
       _comp = null;
       return;
     }
-    final r = _suggest(_c.text, sel.extentOffset, force: force);
+    final r = widget.suggester != null
+        ? widget.suggester!(_c.text, sel.extentOffset, force: force)
+        : _suggest(_c.text, sel.extentOffset, force: force);
     _comp = r.items.isEmpty ? null : r;
     _compSel = 0;
   }
@@ -577,11 +606,13 @@ class _DslEditorState extends State<DslEditor> {
     final v = _c.value;
     if (k == LogicalKeyboardKey.tab && !mod && !alt) {
       return done(
-        () => _apply(EditorOps.indent(v, outdent: shift, size: kDslTab)),
+        () => _apply(EditorOps.indent(v, outdent: shift, size: widget.tabSize)),
       );
     }
     if (mod && !alt && k == LogicalKeyboardKey.slash) {
-      return done(() => _apply(EditorOps.toggleComment(v, '#')));
+      return done(
+        () => _apply(EditorOps.toggleComment(v, widget.commentMarker)),
+      );
     }
     if (mod && !shift && !alt && k == LogicalKeyboardKey.keyD) {
       return done(() => _apply(EditorOps.duplicateLines(v)));
@@ -728,6 +759,9 @@ class _DslEditorState extends State<DslEditor> {
     final start = EditorOps.lineStart(text, lc.line);
     var end = text.indexOf('\n', start);
     if (end < 0) end = text.length;
+    if (widget.hintFor != null) {
+      return widget.hintFor!(text.substring(start, end));
+    }
     final m = RegExp(r'^\s*([A-Za-z_]+)')
         .firstMatch(text.substring(start, end));
     final w = m?.group(1);
@@ -799,7 +833,7 @@ class _DslEditorState extends State<DslEditor> {
           selected: sel.isValid ? sel.end - sel.start : 0,
           lines: '\n'.allMatches(text).length + 1,
           hint: _hint(text),
-          tabSize: kDslTab,
+          tabSize: widget.tabSize,
         ),
       ],
     );
@@ -872,10 +906,10 @@ class _DslEditorState extends State<DslEditor> {
           while (n < l.length && l[n] == ' ') {
             n++;
           }
-          for (var col = kDslTab; col <= n; col += kDslTab) {
+          for (var col = widget.tabSize; col <= n; col += widget.tabSize) {
             guides.add(
               Positioned(
-                left: 8 + (col - kDslTab) * _charW,
+                left: 8 + (col - widget.tabSize) * _charW,
                 top: 12 + i * kEditorLineHeight,
                 width: 1,
                 height: kEditorLineHeight,
@@ -1019,11 +1053,11 @@ class _DslEditorState extends State<DslEditor> {
                                           cursorHeight: kEditorFontSize + 2,
                                           scrollPhysics:
                                               const NeverScrollableScrollPhysics(),
-                                          inputFormatters: const [
-                                            _TabsToSpaces(),
+                                          inputFormatters: [
+                                            _TabsToSpaces(widget.tabSize),
                                             AssistFormatter(
-                                              unit: kDslTab,
-                                              blocks: true,
+                                              unit: widget.tabSize,
+                                              blocks: widget.blocks,
                                             ),
                                           ],
                                           strutStyle: const StrutStyle(
@@ -1063,9 +1097,10 @@ class _DslEditorState extends State<DslEditor> {
   }
 }
 
-/// Pasted tabs become two spaces.
+/// Pasted tabs become spaces.
 class _TabsToSpaces extends TextInputFormatter {
-  const _TabsToSpaces();
+  const _TabsToSpaces(this.size);
+  final int size;
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
@@ -1081,9 +1116,9 @@ class _TabsToSpaces extends TextInputFormatter {
         )
         .length;
     return TextEditingValue(
-      text: newValue.text.replaceAll('\t', ' ' * kDslTab),
+      text: newValue.text.replaceAll('\t', ' ' * size),
       selection: TextSelection.collapsed(
-        offset: newValue.selection.end + n * (kDslTab - 1),
+        offset: newValue.selection.end + n * (size - 1),
       ),
     );
   }

@@ -59,7 +59,7 @@ void main() {
   }
 
   Finder field() => find.descendant(
-    of: find.byType(DslEditor),
+    of: find.byType(SourceEditor),
     matching: find.byWidgetPredicate(
       (w) => w is EditableText && w.maxLines == null,
     ),
@@ -81,7 +81,7 @@ void main() {
     tester,
   ) async {
     await openSource(tester);
-    expect(find.byType(DslEditor), findsOneWidget);
+    expect(find.byType(SourceEditor), findsOneWidget);
     expect(find.text('tiny16.cpu'), findsOneWidget);
     expect(find.text('No problems'), findsOneWidget);
     final text = tester.widget<EditableText>(field()).controller.text;
@@ -193,6 +193,34 @@ void main() {
       addTearDown(c.dispose);
       // Building the span needs a context; just make sure the text round-trips through the controller.
       expect(c.text, contains('sext'));
+    },
+  );
+
+  testWidgets(
+    'the starter program is edited in a code editor and saved on the processor',
+    (tester) async {
+      await openSource(tester);
+      await tester.tap(find.text('Advanced').first);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('starter.s'), findsOneWidget);
+      expect(find.byType(SourceEditor), findsOneWidget);
+
+      final ed = find.byWidgetPredicate(
+        (w) => w is EditableText && w.maxLines == null,
+      );
+      await tester.tapAt(tester.getTopLeft(ed.first) + const Offset(30, 10));
+      await tester.pump();
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(
+          text: 'main:\n    ldi r1, 5\n    ha',
+          selection: TextSelection.collapsed(offset: 26),
+        ),
+      );
+      await tester.pump();
+      // Instructions of this processor are suggested, and the text lands in the processor.
+      expect(find.byType(CompletionPopup), findsOneWidget);
+      expect(s.builderDraft!.json['sample'], contains('ldi r1, 5'));
+      await tester.pump(const Duration(seconds: 1));
     },
   );
 }

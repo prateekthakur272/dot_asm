@@ -22,13 +22,12 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.pal;
+    // A flat panel: square, filled with the panel colour (white in the light theme), with hairlines top and bottom.
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
       decoration: BoxDecoration(
         color: p.panel,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: p.border.withOpacity(0.8)),
+        border: Border(bottom: BorderSide(color: p.border.withOpacity(0.7))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -37,22 +36,17 @@ class SectionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (icon != null) ...[
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: p.accent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, size: 16, color: p.accent),
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Icon(icon, size: 17, color: p.muted),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
               ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    T(title, size: 13.5, weight: FontWeight.w700),
+                    T(title, size: 14, weight: FontWeight.w700),
                     if (subtitle != null) ...[
                       const SizedBox(height: 3),
                       T(
